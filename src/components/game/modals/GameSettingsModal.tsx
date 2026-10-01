@@ -145,6 +145,53 @@ export function GameSettingsModal({ onClose }: { onClose: () => void }) {
             hint="Short vibrations on long-press recognition, placements, and rejected drops. Only takes effect on devices that support it."
           />
         </Section>
+        <Section title="Sound">
+          <Choice
+            label="Music"
+            value={prefs.musicEnabled}
+            options={ON_OFF}
+            onChange={prefs.setMusicEnabled}
+          />
+          <div className="space-y-2">
+            <label htmlFor={`${id}-music-volume`} className="text-sm font-medium">
+              Music volume · {Math.round(prefs.musicVolume * 100)}%
+            </label>
+            <input
+              id={`${id}-music-volume`}
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={prefs.musicVolume * 100}
+              disabled={!prefs.musicEnabled}
+              onChange={(e) => prefs.setMusicVolume(Number(e.target.value) / 100)}
+              className="w-full accent-primary disabled:opacity-50"
+            />
+          </div>
+          <Choice
+            label="Sound effects"
+            value={prefs.soundEffectsEnabled}
+            options={ON_OFF}
+            onChange={prefs.setSoundEffectsEnabled}
+            hint="Short cues for draws, land drops, spells, attacks, life changes, your turn and the result."
+          />
+          <div className="space-y-2">
+            <label htmlFor={`${id}-sfx-volume`} className="text-sm font-medium">
+              Sound effects volume · {Math.round(prefs.soundEffectsVolume * 100)}%
+            </label>
+            <input
+              id={`${id}-sfx-volume`}
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={prefs.soundEffectsVolume * 100}
+              disabled={!prefs.soundEffectsEnabled}
+              onChange={(e) => prefs.setSoundEffectsVolume(Number(e.target.value) / 100)}
+              className="w-full accent-primary disabled:opacity-50"
+            />
+          </div>
+        </Section>
         <Section title="Board appearance">
           <div className="space-y-2">
             <label htmlFor={`${id}-size`} className="text-sm font-medium">

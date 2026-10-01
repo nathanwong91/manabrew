@@ -63,6 +63,28 @@ are used under fair use and fan-content policies for interoperability with
 players' physical and digital collections. Card images are fetched at runtime
 from [Scryfall](https://scryfall.com) and are subject to Scryfall's terms.
 
+## Audio
+
+All audio under `public/audio/` is dedicated to the public domain under
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Files were
+re-encoded to MP3; no other changes were made.
+
+- `music/fantasy-orchestral-theme.mp3`: "Fantasy Orchestral Theme" by Joth,
+  [OpenGameArt](https://opengameart.org/content/fantasy-orchestral-theme).
+- `music/battle-theme-a.mp3`: "Battle Theme A" by cynicmusic,
+  [OpenGameArt](https://opengameart.org/content/battle-theme-a).
+- `sfx/draw.mp3`, `sfx/land.mp3`, `sfx/your-turn.mp3`: Casino Audio by
+  [Kenney](https://kenney.nl), via
+  [OpenGameArt](https://opengameart.org/content/54-casino-sound-effects-cards-dice-chips).
+- `sfx/cast.mp3`, `sfx/damage.mp3`, `sfx/life-gain.mp3`: Interface Sounds by
+  [Kenney](https://kenney.nl), via
+  [OpenGameArt](https://opengameart.org/content/interface-sounds).
+- `sfx/attack.mp3`: RPG Audio by [Kenney](https://kenney.nl), via
+  [OpenGameArt](https://opengameart.org/content/50-rpg-sound-effects).
+- `sfx/victory.mp3`, `sfx/defeat.mp3`: Music Jingles by
+  [Kenney](https://kenney.nl), via
+  [OpenGameArt](https://opengameart.org/content/85-short-music-jingles).
+
 ## Other dependencies
 
 Runtime and build dependencies declared in `package.json`, `Cargo.toml`,

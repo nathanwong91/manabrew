@@ -73,6 +73,20 @@ re-encoded to MP3; no other changes were made.
   [OpenGameArt](https://opengameart.org/content/fantasy-orchestral-theme).
 - `music/battle-theme-a.mp3`: "Battle Theme A" by cynicmusic,
   [OpenGameArt](https://opengameart.org/content/battle-theme-a).
+- `music/a-legend-will-rise.mp3`: "A Legend Will Rise" by CodeManu,
+  [OpenGameArt](https://opengameart.org/content/a-legend-will-rise-orchestral).
+- `music/the-hope.mp3`: "The Hope" by TAD,
+  [OpenGameArt](https://opengameart.org/content/the-hope).
+- `music/once-upon-a-time.mp3`: "Once Upon a Time" by TAD,
+  [OpenGameArt](https://opengameart.org/content/once-upon-a-time-loop).
+- `music/qazijamjam.mp3`: "QaziJamJam" by Emma_MA,
+  [OpenGameArt](https://opengameart.org/content/qazijamjam-orchestral-battle-theme).
+- `music/prepare-to-fight.mp3`: "Prepare to Fight" by Basil,
+  [OpenGameArt](https://opengameart.org/content/prepare-to-fight).
+- `music/determined-pursuit.mp3`: "Determined Pursuit" by Emma_MA,
+  [OpenGameArt](https://opengameart.org/content/determined-pursuit-epic-orchestra-loop).
+- `music/epic-endgame.mp3`: "Epic Endgame Cinematic" by cynicmusic,
+  [OpenGameArt](https://opengameart.org/content/epic-endgame-cinematic).
 - `sfx/draw.mp3`, `sfx/land.mp3`, `sfx/your-turn.mp3`: Casino Audio by
   [Kenney](https://kenney.nl), via
   [OpenGameArt](https://opengameart.org/content/54-casino-sound-effects-cards-dice-chips).

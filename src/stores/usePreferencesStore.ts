@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, devtools } from "zustand/middleware";
 import { getServerConnectionDefaults } from "@/config/webRuntimeConfig";
 import { STORAGE_KEYS } from "@/lib/constants";
+import { DEFAULT_MUSIC_VOLUME, DEFAULT_SOUND_EFFECTS_VOLUME } from "@/lib/gameSounds";
 import { ensureUsernameTag, hasUsernameTag } from "@/lib/username";
 import type { AiOpponentRef } from "@/lib/aiOpponent";
 import type { KnownRelay } from "@/config/knownRelays";
@@ -166,6 +167,14 @@ export interface PreferencesState {
   setTableBackground: (background: BoardBackgroundId) => void;
   hapticFeedback: boolean;
   setHapticFeedback: (enabled: boolean) => void;
+  musicEnabled: boolean;
+  setMusicEnabled: (enabled: boolean) => void;
+  musicVolume: number;
+  setMusicVolume: (volume: number) => void;
+  soundEffectsEnabled: boolean;
+  setSoundEffectsEnabled: (enabled: boolean) => void;
+  soundEffectsVolume: number;
+  setSoundEffectsVolume: (volume: number) => void;
   setMobileHandedness: (handedness: "right" | "left") => void;
 }
 
@@ -192,6 +201,10 @@ const PERSISTED_PREFERENCE_KEYS = [
   "inGameAnimations",
   "mobileHandedness",
   "hapticFeedback",
+  "musicEnabled",
+  "musicVolume",
+  "soundEffectsEnabled",
+  "soundEffectsVolume",
   "preloadCardImages",
   "snapshotRecording",
   "chooseOrderOnMultipleTriggers",
@@ -370,6 +383,15 @@ export const usePreferencesStore = create<PreferencesState>()(
 
           hapticFeedback: true,
           setHapticFeedback: (hapticFeedback) => set({ hapticFeedback }),
+
+          musicEnabled: true,
+          setMusicEnabled: (musicEnabled) => set({ musicEnabled }),
+          musicVolume: DEFAULT_MUSIC_VOLUME,
+          setMusicVolume: (musicVolume) => set({ musicVolume }),
+          soundEffectsEnabled: true,
+          setSoundEffectsEnabled: (soundEffectsEnabled) => set({ soundEffectsEnabled }),
+          soundEffectsVolume: DEFAULT_SOUND_EFFECTS_VOLUME,
+          setSoundEffectsVolume: (soundEffectsVolume) => set({ soundEffectsVolume }),
 
           mobileHandedness: "right",
           setMobileHandedness: (mobileHandedness) => set({ mobileHandedness }),

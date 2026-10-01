@@ -61,6 +61,7 @@ import { useIsMobileGame } from "@/hooks/useBreakpoints";
 import { usePromptEffects } from "@/hooks/usePromptEffects";
 import { useCombatState } from "@/hooks/useCombatState";
 import { useGameEventListeners } from "@/hooks/useGameEventListeners";
+import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGamePrefetch } from "@/hooks/useGamePrefetch";
 import { useMultiplayerInterruption } from "@/hooks/useMultiplayerInterruption";
 import { useLiveGameNavigationGuard } from "@/hooks/useLiveGameNavigationGuard";
@@ -1143,6 +1144,7 @@ export default function Game({ exitTo }: GameProps = {}) {
     return () => clearTimeout(timer);
   }, [gameView?.priorityPlayerId, priorityHighlightPlayerId]);
   useGameEventListeners();
+  useGameAudio();
   useGamePrefetch(preloadCardImages ? "full" : "visible");
   useKeybindings({
     "open-settings": () => setGameSettingsOpen(true),

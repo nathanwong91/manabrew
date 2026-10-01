@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { CardView, GameViewDto, PlayerDto, StackObjectDto } from "@/protocol/game";
-import { clampVolume, gameSoundsFor } from "./gameSounds";
+import { clampVolume, gameSoundsFor, musicMoodFor } from "./gameSounds";
 
 function player(id: string, overrides: Partial<PlayerDto> = {}): PlayerDto {
-  return { id, life: 20, cardsDrawnThisTurn: 0, landsPlayedThisTurn: 0, ...overrides } as PlayerDto;
+  return {
+    id,
+    status: "playing",
+    life: 20,
+    cardsDrawnThisTurn: 0,
+    landsPlayedThisTurn: 0,
+    ...overrides,
+  } as PlayerDto;
 }
 
 function view(overrides: Partial<GameViewDto> = {}): GameViewDto {
@@ -138,5 +145,39 @@ describe("clampVolume", () => {
     expect(clampVolume(undefined, 0.5)).toBe(0.5);
     expect(clampVolume(Number.NaN, 0.5)).toBe(0.5);
     expect(clampVolume("0.7", 0.5)).toBe(0.5);
+  });
+});
+
+describe("musicMoodFor", () => {
+  const battlefield = (cards: CardView[]) => [
+    { zone: "battlefield" as const, ownerId: "player-1", cards, count: cards.length },
+  ];
+
+  it("is calm without a view, in a quiet game, and after game over", () => {
+    expect(musicMoodFor(null)).toBe("calm");
+    expect(musicMoodFor(view())).toBe("calm");
+    expect(
+      musicMoodFor(
+        view({ gameOver: true, players: [player(ME, { life: 0 }), player("player-1")] }),
+      ),
+    ).toBe("calm");
+  });
+
+  it("is tense while attackers are declared", () => {
+    expect(musicMoodFor(view({ zones: battlefield([attacker("c1")]) }))).toBe("tense");
+  });
+
+  it("is tense when a playing player is at or below the low life threshold", () => {
+    expect(musicMoodFor(view({ players: [player(ME, { life: 7 }), player("player-1")] }))).toBe(
+      "tense",
+    );
+    expect(musicMoodFor(view({ players: [player(ME, { life: 8 }), player("player-1")] }))).toBe(
+      "calm",
+    );
+  });
+
+  it("ignores players who are out of the game", () => {
+    const out = player("player-2", { life: 0, status: "lost" });
+    expect(musicMoodFor(view({ players: [player(ME), player("player-1"), out] }))).toBe("calm");
   });
 });

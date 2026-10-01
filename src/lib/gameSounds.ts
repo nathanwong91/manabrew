@@ -11,10 +11,25 @@ export type GameSound =
   | "victory"
   | "defeat";
 
-export const MUSIC_TRACKS: readonly string[] = [
-  "/audio/music/fantasy-orchestral-theme.mp3",
-  "/audio/music/battle-theme-a.mp3",
-];
+export type MusicMood = "calm" | "tense";
+
+export const MUSIC_TRACKS: Record<MusicMood, readonly string[]> = {
+  calm: [
+    "/audio/music/fantasy-orchestral-theme.mp3",
+    "/audio/music/a-legend-will-rise.mp3",
+    "/audio/music/the-hope.mp3",
+    "/audio/music/once-upon-a-time.mp3",
+  ],
+  tense: [
+    "/audio/music/battle-theme-a.mp3",
+    "/audio/music/qazijamjam.mp3",
+    "/audio/music/prepare-to-fight.mp3",
+    "/audio/music/determined-pursuit.mp3",
+    "/audio/music/epic-endgame.mp3",
+  ],
+};
+
+export const LOW_LIFE_THRESHOLD = 7;
 
 export const SOUND_FILES: Record<GameSound, string> = {
   draw: "/audio/sfx/draw.mp3",
@@ -53,6 +68,12 @@ function attackerCount(view: GameViewDto): number {
     .filter((z) => z.zone === "battlefield")
     .flatMap((z) => z.cards)
     .filter((c) => c.visibility === "visible" && Boolean(c.attackingPlayerId)).length;
+}
+
+export function musicMoodFor(view: GameViewDto | null): MusicMood {
+  if (!view || view.gameOver) return "calm";
+  const lowLife = view.players.some((p) => p.status === "playing" && p.life <= LOW_LIFE_THRESHOLD);
+  return lowLife || attackerCount(view) > 0 ? "tense" : "calm";
 }
 
 function lifeChanges(previous: GameViewDto, next: GameViewDto): number[] {

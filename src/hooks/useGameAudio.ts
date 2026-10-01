@@ -1,12 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import {
   clampVolume,
   DEFAULT_MUSIC_VOLUME,
   DEFAULT_SOUND_EFFECTS_VOLUME,
   gameSoundsFor,
   MUSIC_TRACKS,
+  musicMoodFor,
   SOUND_FILES,
   type GameSound,
+  type MusicMood,
 } from "@/lib/gameSounds";
 import { useGameStore } from "@/stores/useGameStore";
 import { usePreferencesStore } from "@/stores/usePreferencesStore";
@@ -25,41 +27,114 @@ function playSound(sound: GameSound) {
   audio.play().catch(() => {});
 }
 
+const CROSSFADE_MS = 1500;
+const FADE_TICK_MS = 50;
+const CALM_HOLD_MS = 20000;
+
+function musicVolume() {
+  return clampVolume(usePreferencesStore.getState().musicVolume, DEFAULT_MUSIC_VOLUME);
+}
+
+function pickTrack(mood: MusicMood, previous: string | null): string {
+  const pool = MUSIC_TRACKS[mood].filter((track) => track !== previous);
+  return pool[Math.floor(Math.random() * pool.length)] ?? MUSIC_TRACKS[mood][0];
+}
+
+function stopAudio(audio: HTMLAudioElement) {
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+}
+
 export function useGameAudio() {
   const musicEnabled = usePreferencesStore((s) => s.musicEnabled);
-  const musicVolume = usePreferencesStore((s) => s.musicVolume);
-  const musicRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!musicEnabled) return;
-    let track = Math.floor(Math.random() * MUSIC_TRACKS.length);
-    const audio = new Audio(MUSIC_TRACKS[track]);
-    audio.volume = clampVolume(usePreferencesStore.getState().musicVolume, DEFAULT_MUSIC_VOLUME);
-    musicRef.current = audio;
-    const start = () => {
+    let mood = musicMoodFor(useGameStore.getState().gameView);
+    let track = pickTrack(mood, null);
+    let outgoing: HTMLAudioElement | null = null;
+    let fadeTimer = 0;
+    let holdTimer = 0;
+
+    const play = (src: string, volume: number) => {
+      const audio = new Audio(src);
+      audio.volume = volume;
+      audio.addEventListener("ended", () => {
+        if (audio === current) switchTo(mood, false);
+      });
       audio.play().catch(() => {});
+      return audio;
     };
-    const playNext = () => {
-      track = (track + 1) % MUSIC_TRACKS.length;
-      audio.src = MUSIC_TRACKS[track];
-      start();
+
+    let current = play(track, musicVolume());
+
+    const finishFade = () => {
+      window.clearInterval(fadeTimer);
+      if (outgoing) stopAudio(outgoing);
+      outgoing = null;
     };
-    audio.addEventListener("ended", playNext);
-    window.addEventListener("pointerdown", start, { once: true });
-    start();
+
+    const switchTo = (next: MusicMood, crossfade: boolean) => {
+      finishFade();
+      mood = next;
+      track = pickTrack(next, track);
+      const previous = current;
+      current = play(track, crossfade ? 0 : musicVolume());
+      if (!crossfade) {
+        stopAudio(previous);
+        return;
+      }
+      outgoing = previous;
+      const from = previous.volume;
+      const started = performance.now();
+      fadeTimer = window.setInterval(() => {
+        const t = Math.min(1, (performance.now() - started) / CROSSFADE_MS);
+        current.volume = musicVolume() * t;
+        previous.volume = from * (1 - t);
+        if (t === 1) finishFade();
+      }, FADE_TICK_MS);
+    };
+
+    const clearHold = () => {
+      window.clearTimeout(holdTimer);
+      holdTimer = 0;
+    };
+
+    const unsubscribeGame = useGameStore.subscribe((state, prev) => {
+      if (state.gameView === prev.gameView) return;
+      const next = musicMoodFor(state.gameView);
+      if (next === mood) {
+        clearHold();
+      } else if (next === "tense") {
+        clearHold();
+        switchTo("tense", true);
+      } else if (!holdTimer) {
+        holdTimer = window.setTimeout(() => {
+          holdTimer = 0;
+          switchTo("calm", true);
+        }, CALM_HOLD_MS);
+      }
+    });
+
+    const unsubscribeVolume = usePreferencesStore.subscribe((state, prev) => {
+      if (state.musicVolume !== prev.musicVolume && !outgoing) current.volume = musicVolume();
+    });
+
+    const resume = () => {
+      current.play().catch(() => {});
+    };
+    window.addEventListener("pointerdown", resume, { once: true });
+
     return () => {
-      window.removeEventListener("pointerdown", start);
-      audio.removeEventListener("ended", playNext);
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
-      musicRef.current = null;
+      window.removeEventListener("pointerdown", resume);
+      unsubscribeGame();
+      unsubscribeVolume();
+      clearHold();
+      finishFade();
+      stopAudio(current);
     };
   }, [musicEnabled]);
-
-  useEffect(() => {
-    if (musicRef.current) musicRef.current.volume = clampVolume(musicVolume, DEFAULT_MUSIC_VOLUME);
-  }, [musicVolume]);
 
   useEffect(
     () =>

@@ -6,11 +6,13 @@ export interface PromptPreferencesState {
   show: Partial<Record<PromptType, boolean>>;
   fullControl: boolean;
   skipNonReactiveInstants: boolean;
+  autoPayMana: boolean;
 
   setShow: (promptType: PromptType, show: boolean) => void;
   clearShow: (promptType: PromptType) => void;
   setFullControl: (fullControl: boolean) => void;
   setSkipNonReactiveInstants: (skipNonReactiveInstants: boolean) => void;
+  setAutoPayMana: (autoPayMana: boolean) => void;
 }
 
 export const usePromptPreferencesStore = create<PromptPreferencesState>()(
@@ -19,6 +21,7 @@ export const usePromptPreferencesStore = create<PromptPreferencesState>()(
       show: {},
       fullControl: false,
       skipNonReactiveInstants: false,
+      autoPayMana: false,
       setShow: (promptType, show) => set((s) => ({ show: { ...s.show, [promptType]: show } })),
       clearShow: (promptType) =>
         set((s) => {
@@ -28,6 +31,7 @@ export const usePromptPreferencesStore = create<PromptPreferencesState>()(
         }),
       setFullControl: (fullControl) => set({ fullControl }),
       setSkipNonReactiveInstants: (skipNonReactiveInstants) => set({ skipNonReactiveInstants }),
+      setAutoPayMana: (autoPayMana) => set({ autoPayMana }),
     }),
     {
       name: "manabrew.promptPreferences",
@@ -35,6 +39,7 @@ export const usePromptPreferencesStore = create<PromptPreferencesState>()(
         show: s.show,
         fullControl: s.fullControl,
         skipNonReactiveInstants: s.skipNonReactiveInstants,
+        autoPayMana: s.autoPayMana,
       }),
     },
   ),

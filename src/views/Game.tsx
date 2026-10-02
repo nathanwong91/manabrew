@@ -1310,6 +1310,25 @@ export default function Game({ exitTo }: GameProps = {}) {
     [payManaCostPrompt],
   );
   const payLifeAction = payManaCostPrompt?.actions.find((action) => action.type === "payLife");
+  const autoPayMana = usePromptPreferencesStore((s) => s.autoPayMana);
+  const autoPaidPromptRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!payManaCostPrompt) autoPaidPromptRef.current = null;
+    if (!autoPayMana || !payManaCostPrompt || isWaitingForResponse) return;
+    if (delveSourceIds.length > 0 || payLifeAction) return;
+    const key =
+      activePrompt?.promptId ?? `${payManaCostPrompt.cardId}:${payManaCostPrompt.manaCost}`;
+    if (autoPaidPromptRef.current === key) return;
+    autoPaidPromptRef.current = key;
+    payManaPrimaryRef.current();
+  }, [
+    autoPayMana,
+    payManaCostPrompt,
+    isWaitingForResponse,
+    delveSourceIds,
+    payLifeAction,
+    activePrompt?.promptId,
+  ]);
   const handleDelveCard = useCallback(
     (cardId: string) => {
       if (useGameStore.getState().isWaitingForResponse) return;

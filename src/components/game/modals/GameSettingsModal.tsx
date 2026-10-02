@@ -75,6 +75,8 @@ export function GameSettingsModal({ onClose }: { onClose: () => void }) {
   const setFullControl = usePromptPreferencesStore((s) => s.setFullControl);
   const skipNonReactiveInstants = usePromptPreferencesStore((s) => s.skipNonReactiveInstants);
   const setSkipNonReactiveInstants = usePromptPreferencesStore((s) => s.setSkipNonReactiveInstants);
+  const autoPayMana = usePromptPreferencesStore((s) => s.autoPayMana);
+  const setAutoPayMana = usePromptPreferencesStore((s) => s.setAutoPayMana);
   const id = useId();
   const roomTableStyle = useServerStore((s) => s.currentRoom?.table_style);
   const tableBackgroundLocked = roomTableStyle != null;
@@ -139,6 +141,13 @@ export function GameSettingsModal({ onClose }: { onClose: () => void }) {
             options={ON_OFF}
             onChange={setSkipNonReactiveInstants}
             hint="Outside your main phases, autopass skips spells and abilities unless something is on the stack, attackers or blockers are declared, or it is an opponent's end step. Then it still stops for counters, removal, combat tricks, protection and flash cards."
+          />
+          <Choice
+            label="Auto-pay mana"
+            value={autoPayMana}
+            options={ON_OFF}
+            onChange={setAutoPayMana}
+            hint="Pays mana costs automatically from your mana pool and untapped sources. Costs that offer delve or paying life still ask."
           />
           <Choice
             label="Choose simultaneous trigger order"

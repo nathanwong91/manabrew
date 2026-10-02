@@ -6,6 +6,7 @@ import type { Prompt, StepKind } from "@/protocol";
 import { validCardIdsInCards, type BoardTargetBuckets } from "@/lib/boardTargets";
 import type { PreviewPointerInput } from "@/lib/cardPreview";
 import { stripUsernameTag } from "@/lib/username";
+import { commanderLine } from "@/lib/commanderNames";
 import { nextHandOrderMode } from "@/lib/handOrder";
 import { type ZonePanelItem } from "@/stores/usePreferencesStore";
 import { type BoardCanvasLayout, type BoardCanvasRegion } from "@/pixi/BoardCanvas";
@@ -1178,6 +1179,7 @@ export function GameBoard({
       return {
         playerId: player.id,
         name: stripUsernameTag(player.name),
+        commander: commanderLine(gameDecks[player.id], player.commandZone),
         isSelf,
         life: dev.life ?? player.life,
         color,
@@ -1242,6 +1244,7 @@ export function GameBoard({
     currentRoom,
     myPermanents,
     opponentPermanentsByPlayer,
+    gameDecks,
   ]);
   // Shared open-handlers for the local player's command / graveyard / exile
   // zones. Used by BOTH the on-grid Pixi tiles and the React panel so the

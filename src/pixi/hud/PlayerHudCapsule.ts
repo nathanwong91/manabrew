@@ -137,6 +137,7 @@ export class PlayerHudCapsule {
   private heart: Text;
   private life: Text;
   private nameLabel: Text;
+  private commanderLabel: Text;
   private lifeFloat: Text;
   private handCount: Text;
   private handFan = new Container();
@@ -251,6 +252,8 @@ export class PlayerHudCapsule {
     this.life.anchor.set(0, 0.5);
     this.nameLabel = new Text({ text: "", style: this.textStyle(12) });
     this.nameLabel.eventMode = "none";
+    this.commanderLabel = new Text({ text: "", style: this.textStyle(12) });
+    this.commanderLabel.eventMode = "none";
     this.lifeFloat = new Text({ text: "", style: this.textStyle(16) });
     this.lifeFloat.anchor.set(0.5);
     this.lifeFloat.visible = false;
@@ -304,6 +307,7 @@ export class PlayerHudCapsule {
       this.heart,
       this.life,
       this.nameLabel,
+      this.commanderLabel,
       this.handFan,
       this.handCount,
       this.emptyStateText,
@@ -400,6 +404,7 @@ export class PlayerHudCapsule {
       s.combatLethal,
       s.color,
       s.name,
+      s.commander,
       s.isBot,
       s.manaPool,
       s.badges,
@@ -626,6 +631,7 @@ export class PlayerHudCapsule {
     this.contentBounds.clear();
     this.life.text = String(this.spec.life);
     this.nameLabel.visible = false;
+    this.commanderLabel.visible = false;
     this.updateFilters();
     this.applyOffline();
 
@@ -926,17 +932,33 @@ export class PlayerHudCapsule {
       });
   }
 
-  private placeName(x: number, y: number, anchorX: number, maxWidth: number): number {
-    const full = stripUsernameTag(this.spec.name);
-    this.nameLabel.style = this.textStyle(12);
-    this.nameLabel.text = full;
-    for (let length = full.length - 1; this.nameLabel.width > maxWidth && length > 1; length--) {
-      this.nameLabel.text = `${full.slice(0, length)}\u2026`;
+  private fitLabel(label: Text, full: string, maxWidth: number): void {
+    label.text = full;
+    for (let length = full.length - 1; label.width > maxWidth && length > 1; length--) {
+      label.text = `${full.slice(0, length)}\u2026`;
     }
+  }
+
+  private placeName(x: number, y: number, anchorX: number, maxWidth: number): number {
+    const commander = this.spec.commander;
+    const shift = commander && maxWidth > 24 ? 6 : 0;
+    this.nameLabel.style = this.textStyle(12);
+    this.fitLabel(this.nameLabel, stripUsernameTag(this.spec.name), maxWidth);
     this.nameLabel.anchor.set(anchorX, 0.5);
-    this.nameLabel.position.set(x, y);
+    this.nameLabel.position.set(x, y - shift);
     this.nameLabel.visible = maxWidth > 24;
-    return this.nameLabel.visible ? this.nameLabel.width : 0;
+    this.commanderLabel.visible = shift > 0;
+    if (shift > 0 && commander) {
+      this.commanderLabel.style = this.styled(10, "500", this.theme.gameTheme.textMuted);
+      this.fitLabel(this.commanderLabel, commander, maxWidth);
+      this.commanderLabel.anchor.set(anchorX, 0.5);
+      this.commanderLabel.position.set(x, y + shift + 1);
+    }
+    if (!this.nameLabel.visible) return 0;
+    return Math.max(
+      this.nameLabel.width,
+      this.commanderLabel.visible ? this.commanderLabel.width : 0,
+    );
   }
 
   private layoutLife(x: number, y: number, centered: boolean): void {

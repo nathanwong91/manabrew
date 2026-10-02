@@ -18,7 +18,34 @@ interface ResolveAiOpponentArgs {
   last: AiOpponentRef | null;
 }
 
-function hasCards(deck: Deck): boolean {
+interface FillRandomOpponentsArgs {
+  slots: (Deck | null)[];
+  pool: Deck[];
+  exclude: Deck[];
+  fingerprint: (deck: Deck) => string;
+  random?: () => number;
+}
+
+export function fillRandomOpponents({
+  slots,
+  pool,
+  exclude,
+  fingerprint,
+  random = Math.random,
+}: FillRandomOpponentsArgs): (Deck | null)[] {
+  const taken = new Set([...exclude, ...slots.filter((slot) => slot !== null)].map(fingerprint));
+  const remaining = pool.filter((deck) => {
+    const key = fingerprint(deck);
+    if (taken.has(key)) return false;
+    taken.add(key);
+    return true;
+  });
+  return slots.map(
+    (slot) => slot ?? remaining.splice(Math.floor(random() * remaining.length), 1)[0] ?? null,
+  );
+}
+
+export function hasCards(deck: Deck): boolean {
   return deck.cards.length > 0 || (deck.commanders?.length ?? 0) > 0;
 }
 

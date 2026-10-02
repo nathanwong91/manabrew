@@ -72,6 +72,8 @@ export function GameSettingsModal({ onClose }: { onClose: () => void }) {
   const prefs = usePreferencesStore();
   const fullControl = usePromptPreferencesStore((s) => s.fullControl);
   const setFullControl = usePromptPreferencesStore((s) => s.setFullControl);
+  const skipNonReactiveInstants = usePromptPreferencesStore((s) => s.skipNonReactiveInstants);
+  const setSkipNonReactiveInstants = usePromptPreferencesStore((s) => s.setSkipNonReactiveInstants);
   const id = useId();
   const roomTableStyle = useServerStore((s) => s.currentRoom?.table_style);
   const tableBackgroundLocked = roomTableStyle != null;
@@ -129,6 +131,13 @@ export function GameSettingsModal({ onClose }: { onClose: () => void }) {
             ]}
             onChange={setFullControl}
             hint="Full control stops at every window. Autopass skips windows with only mana abilities after a short delay."
+          />
+          <Choice
+            label="Skip non-reactive instants"
+            value={skipNonReactiveInstants}
+            options={ON_OFF}
+            onChange={setSkipNonReactiveInstants}
+            hint="On other players' turns, autopass ignores spells you would not cast then. Counters, removal, combat tricks, protection and flash creatures still stop."
           />
           <Choice
             label="Choose simultaneous trigger order"

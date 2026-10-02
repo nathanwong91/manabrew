@@ -17,6 +17,7 @@ import { gameIconTexture } from "@/pixi/gameIconCache";
 import { loadManaSymbolTexture } from "@/pixi/manaSymbolCache";
 import { PixiRichText } from "@/pixi/cardPreview/PixiRichText";
 import { deckCardToPreviewDto } from "@/lib/scryfall.utils";
+import { isReactiveCard } from "@/lib/reactiveCards";
 import {
   CARD_H,
   CARD_HOVER_TRANSITION_SECONDS,
@@ -327,15 +328,32 @@ export function actionTitle(promptType: PromptOverlaySpec["action"]["promptType"
       return "Action Required";
   }
 }
+function isPassableCast(spec: PromptOverlaySpec, cardId: string): boolean {
+  if (spec.gameView.activePlayerId === spec.localPlayerId) return false;
+  const player = spec.gameView.players.find((p) => p.id === spec.localPlayerId);
+  if (!player) return false;
+  const card = [...player.hand, ...player.graveyard, ...player.exile, ...player.commandZone].find(
+    (c) => c.id === cardId,
+  );
+  return card != null && !isReactiveCard(card);
+}
+
 export function isAutopassWindow(spec: PromptOverlaySpec | null): boolean {
   const input = spec?.currentPrompt?.input;
-  return (
-    spec != null &&
-    input?.type === "chooseAction" &&
-    spec.action.promptActionOverride == null &&
-    !spec.action.isWaitingForResponse &&
-    !usePromptPreferencesStore.getState().fullControl &&
-    input.actions.every((action) => action.type === "activateAbility" && action.isManaAbility)
+  if (
+    spec == null ||
+    input?.type !== "chooseAction" ||
+    spec.action.promptActionOverride != null ||
+    spec.action.isWaitingForResponse
+  ) {
+    return false;
+  }
+  const { fullControl, skipNonReactiveInstants } = usePromptPreferencesStore.getState();
+  if (fullControl) return false;
+  return input.actions.every(
+    (action) =>
+      (action.type === "activateAbility" && action.isManaAbility) ||
+      (skipNonReactiveInstants && action.type === "cast" && isPassableCast(spec, action.cardId)),
   );
 }
 

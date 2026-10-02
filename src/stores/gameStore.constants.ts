@@ -1,3 +1,4 @@
+import { displayPlayerName, renameBotsInText } from "@/lib/botNames";
 import { notePromptArrived } from "@/lib/engineTelemetry";
 import type {
   GameState,
@@ -47,8 +48,11 @@ function normalizeGameView(
 
   const battlefield = zones.filter((zone) => zone.zone === "battlefield").flatMap(visibleCardsOf);
 
+  const gameId = incoming.gameId ?? current?.gameId ?? "";
   const players: ClientPlayerDto[] = rawPlayers.map((player) => ({
     ...player,
+    name: displayPlayerName(gameId, player.name),
+    rawName: player.name,
     hand: cardsOf(player.id, "hand"),
     handCount: zoneOf(player.id, "hand")?.count ?? 0,
     graveyard: cardsOf(player.id, "graveyard"),
@@ -66,7 +70,7 @@ function normalizeGameView(
   const hasView = zones.length > 0 || rawPlayers.length > 0;
 
   return {
-    gameId: incoming.gameId ?? current?.gameId ?? "",
+    gameId,
     turn: incoming.turn ?? current?.turn ?? 0,
     step: incoming.step ?? current?.step ?? "untap",
     combatAssignments: Array.isArray(incoming.combatAssignments)
@@ -151,7 +155,12 @@ export function applyDisplay(
   set: (partial: Partial<GameState>) => void,
   get: () => GameState,
 ) {
-  route({ displayEvents: [event], gameView: null, prompt: null }, `${source}: display`, set, get);
+  route(
+    { displayEvents: [renameBotsInText(event)], gameView: null, prompt: null },
+    `${source}: display`,
+    set,
+    get,
+  );
 }
 
 // The engine rejected our last response. It re-sends the open prompt right
@@ -176,5 +185,10 @@ export function applyPrompt(
     console.log(`[prompt:${source}] ${prompt.input.type}`, JSON.stringify(prompt, null, 2));
   }
   notePromptArrived(prompt.input.type);
-  route({ displayEvents: [], gameView: null, prompt }, `${source}: ${prompt.input.type}`, set, get);
+  route(
+    { displayEvents: [], gameView: null, prompt: renameBotsInText(prompt) },
+    `${source}: ${prompt.input.type}`,
+    set,
+    get,
+  );
 }

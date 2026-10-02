@@ -17,6 +17,7 @@ export type { DisplayEvent };
 export type ClientCardDto = CardDto & { zoneId: string };
 
 export type ClientPlayerDto = PlayerDto & {
+  rawName?: string;
   hand: ClientCardDto[];
   graveyard: ClientCardDto[];
   exile: ClientCardDto[];

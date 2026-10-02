@@ -789,9 +789,10 @@ export function GameBoard({
     const map = new Map<string, string>();
     if (myAvatar) map.set(me.id, myAvatar);
     for (const op of opponents) {
-      const entry = playerDecks.find((d) => d.username === op.name);
+      const entry = playerDecks.find((d) => d.username === (op.rawName ?? op.name));
       const avatarUrl =
-        relayPlayers.find((p) => p.username === op.name)?.avatar_url ?? entry?.avatar_url;
+        relayPlayers.find((p) => p.username === (op.rawName ?? op.name))?.avatar_url ??
+        entry?.avatar_url;
       if (avatarUrl) map.set(op.id, avatarUrl);
     }
     return map;

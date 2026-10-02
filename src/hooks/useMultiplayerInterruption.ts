@@ -31,7 +31,8 @@ export function useMultiplayerInterruption(): MultiplayerInterruption {
   // disconnect matters even after elimination.
   const stillNeeded = (p: { username: string }) =>
     p.username === currentRoom?.host ||
-    (gamePlayers?.find((gp) => gp.name === p.username)?.status ?? "playing") === "playing";
+    (gamePlayers?.find((gp) => (gp.rawName ?? gp.name) === p.username)?.status ?? "playing") ===
+      "playing";
   const disconnectedNames = (currentRoom?.status === "InGame" ? currentRoom.players : [])
     .filter((p) => !p.is_bot && !p.connected && p.username !== username && stillNeeded(p))
     .map((p) => p.username);

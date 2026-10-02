@@ -44,7 +44,7 @@ const STATE_TOUCH_ROW_HEIGHT = 44;
 const TRAY_HORIZONTAL_PADDING = 6;
 const TRAY_VERTICAL_PADDING = 2;
 const TRAY_RADIUS = 6;
-const STATE_ORDER = ["incoming-damage", "poison", "commander", "monarch", "initiative"];
+const STATE_ORDER = ["incoming-damage", "threat", "poison", "commander", "monarch", "initiative"];
 
 const iconTextures = new Map<string, Texture>();
 
@@ -330,6 +330,7 @@ export class PlayerHudCapsule {
         lines: RING_ABILITIES.map((text, i) => ({ text, active: i < level })),
       };
     }
+    if (badge.id === "threat") return { title: badge.label };
     return { title: badge.count === undefined ? badge.label : `${badge.label}: ${badge.count}` };
   }
 

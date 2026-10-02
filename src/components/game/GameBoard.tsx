@@ -7,6 +7,14 @@ import { validCardIdsInCards, type BoardTargetBuckets } from "@/lib/boardTargets
 import type { PreviewPointerInput } from "@/lib/cardPreview";
 import { stripUsernameTag } from "@/lib/username";
 import { commanderLine } from "@/lib/commanderNames";
+import {
+  COMMANDER_DAMAGE_LETHAL,
+  POISON_LETHAL,
+  commanderDamageFrom,
+  threatScore,
+  topThreatId,
+  untappedCreaturePower,
+} from "@/lib/threat";
 import { nextHandOrderMode } from "@/lib/handOrder";
 import { type ZonePanelItem } from "@/stores/usePreferencesStore";
 import { type BoardCanvasLayout, type BoardCanvasRegion } from "@/pixi/BoardCanvas";
@@ -874,6 +882,33 @@ export function GameBoard({
       addCards(p.exile);
     }
     const roomByName = new Map(currentRoom?.players.map((p) => [p.username, p]) ?? []);
+    const threats = opponents
+      .filter((op) => op.status === "playing")
+      .map((op) => {
+        const boardPower = untappedCreaturePower(
+          opponentPermanentsByPlayer.get(op.id) ?? [],
+          op.id,
+        );
+        const commanderDamage = commanderDamageFrom(me.commanderDamage ?? {}, cardOwner, op.id);
+        const score = threatScore({ boardPower, commanderDamage, poison: me.poison });
+        return { id: op.id, boardPower, commanderDamage, score };
+      });
+    const topThreat = topThreatId(threats);
+    const threatBadges = (player: ClientPlayerDto): PlayerHudBadge[] => {
+      const threat = threats.find((entry) => entry.id === player.id);
+      if (!threat) return [];
+      const poison = me.poison > 0 ? ` \u00b7 Your poison ${me.poison}/${POISON_LETHAL}` : "";
+      return [
+        {
+          id: "threat",
+          icon: "broadsword",
+          color:
+            topThreat === player.id ? gameTheme.promptAction.attackAction : gameTheme.textMuted,
+          label: `Board power ${threat.boardPower} \u00b7 Commander damage to you ${threat.commanderDamage}/${COMMANDER_DAMAGE_LETHAL}${poison}`,
+          count: threat.boardPower,
+        },
+      ];
+    };
     // Dev overrides are applied to every player (not just self) so the dev
     // panel can light up each state on all opponents at once. In production
     // these are all empty/false, so this is a no-op.
@@ -1083,6 +1118,7 @@ export function GameBoard({
           gameTheme.badges,
         ),
         ...cmdDamageBadges(player),
+        ...threatBadges(player),
       ];
       const ruleFacts: PlayerHudFact[] = [
         {
@@ -1239,6 +1275,7 @@ export function GameBoard({
     gameTheme.activeAction.active,
     appTheme.primary,
     gameTheme.promptAction.defenseAction,
+    gameTheme.promptAction.attackAction,
     gameTheme.textMuted,
     devOverrides,
     currentRoom,

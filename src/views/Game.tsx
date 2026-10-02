@@ -73,7 +73,7 @@ import { boardBackgroundDarken, boardBackgroundUrl } from "@/pixi/board/boardBac
 import { ROUTES } from "@/lib/constants";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useLimitedStore } from "@/stores/useLimitedStore";
-import { peek as peekGauntletMatch, tryConsumeGauntletMatch } from "@/lib/gauntletReturn";
+import { tryConsumeGauntletMatch } from "@/lib/gauntletReturn";
 import { intentIsHostile, intentPrefersArrow } from "@/types/promptType";
 import type { PromptType } from "@/protocol";
 import { declareAttackersOutput } from "@/components/prompts/internal/playerActions";
@@ -2078,12 +2078,6 @@ export default function Game({ exitTo }: GameProps = {}) {
     zoneCardPreview && externalPreviewActive ? { "toggle-card-view": togglePreviewView } : {},
     zonePreviewScope,
   );
-  useEffect(() => {
-    if (!gameView?.gameOver && activePrompt?.input.type !== "gameOver") return;
-    if (peekGauntletMatch()) return;
-    const timer = setTimeout(() => endGame(), 3000);
-    return () => clearTimeout(timer);
-  }, [gameView?.gameOver, activePrompt?.input.type, endGame]);
   const navigate = useNavigate();
   useEffect(() => {
     if (!gameView?.gameOver) return;

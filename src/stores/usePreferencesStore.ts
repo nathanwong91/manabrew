@@ -9,6 +9,7 @@ import type { KnownRelay } from "@/config/knownRelays";
 import type { PlaymatSettings } from "@/protocol/game";
 import type { AiController, GameFormat } from "@/types/server";
 import type { HandOrderMode } from "@/lib/handOrder";
+import type { OpponentPace } from "@/lib/opponentPace";
 import { APP_LOCALES, type AppLanguagePreference } from "@/i18n/locales";
 import { DEFAULT_BOARD_BACKGROUND_ID, type BoardBackgroundId } from "@/pixi/board/boardBackgrounds";
 import type { ThemeColors } from "@/themes/appTheme";
@@ -178,6 +179,8 @@ export interface PreferencesState {
   soundEffectsVolume: number;
   setSoundEffectsVolume: (volume: number) => void;
   setMobileHandedness: (handedness: "right" | "left") => void;
+  opponentPace: OpponentPace;
+  setOpponentPace: (pace: OpponentPace) => void;
 }
 
 const PERSISTED_PREFERENCE_KEYS = [
@@ -202,6 +205,7 @@ const PERSISTED_PREFERENCE_KEYS = [
   "boardBackgroundId",
   "inGameAnimations",
   "mobileHandedness",
+  "opponentPace",
   "hapticFeedback",
   "musicEnabled",
   "musicVolume",
@@ -401,6 +405,8 @@ export const usePreferencesStore = create<PreferencesState>()(
 
           mobileHandedness: "right",
           setMobileHandedness: (mobileHandedness) => set({ mobileHandedness }),
+          opponentPace: "instant",
+          setOpponentPace: (opponentPace) => set({ opponentPace }),
 
           cardHoverDelayMs: 350,
           setCardHoverDelayMs: (ms) => set({ cardHoverDelayMs: ms }),

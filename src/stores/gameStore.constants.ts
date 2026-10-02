@@ -11,6 +11,8 @@ import type { Prompt, ProtocolError } from "@/protocol";
 import type { DisplayEvent } from "@/protocol/display";
 import type { GameViewDto, ZoneDto, ZoneKind } from "@/protocol/game";
 import { isPromptLoggingEnabled } from "@/lib/debugPrompts";
+import { notePaceApplied, pendingPaceDelayMs } from "@/lib/opponentPace";
+import { usePreferencesStore } from "./usePreferencesStore";
 import { GAME_CARD_DEFAULTS, hiddenZoneCard } from "@/lib/gameCard";
 
 function visibleCardsOf(zone: ZoneDto): ClientCardDto[] {
@@ -110,7 +112,12 @@ function route(
   get: () => GameState,
 ) {
   const queueLen = get().deferredQueue.length;
-  if (snapshot.displayEvents.length > 0 || queueLen > 0 || get().isFlashing) {
+  const paceDelay = pendingPaceDelayMs(
+    snapshot,
+    get().myPlayerSlot,
+    usePreferencesStore.getState().opponentPace,
+  );
+  if (snapshot.displayEvents.length > 0 || queueLen > 0 || get().isFlashing || paceDelay > 0) {
     set({
       deferredQueue: [...get().deferredQueue, snapshot],
       debugInfo: `${source} (queued #${queueLen + 1})`,
@@ -120,6 +127,7 @@ function route(
   const updates: Partial<GameState> = { debugInfo: source };
   if (snapshot.gameView) {
     updates.gameView = snapshot.gameView;
+    notePaceApplied();
     // An eliminated seat has no pending prompt: the engine consumed it (a
     // concede at priority) and will never await this player again.
     const me = snapshot.gameView.players.find((p) => p.id === get().myPlayerSlot);

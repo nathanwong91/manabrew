@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import {
   Github,
   HeartPulse,
+  History,
   Info,
   Layers,
   LibraryBig,
@@ -69,7 +70,10 @@ export function getTopBarNav(signedIn = false): NavDestination[] {
   return direct;
 }
 export function getMoreDestinations(): NavDestination[] {
-  const more: NavDestination[] = [{ to: ROUTES.ABOUT, label: `About`, icon: Info }];
+  const more: NavDestination[] = [
+    { to: ROUTES.MATCH_HISTORY, label: `Match History`, icon: History },
+    { to: ROUTES.ABOUT, label: `About`, icon: Info },
+  ];
   if (DESIGN_SYSTEM_ENABLED) {
     more.push({ to: ROUTES.DESIGN_SYSTEM, label: `Design System`, icon: Palette });
   }

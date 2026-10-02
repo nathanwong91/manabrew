@@ -18,6 +18,7 @@ export const ROUTES = {
   COMPANION: "/companion",
   SETTINGS: "/settings",
   ABOUT: "/about",
+  MATCH_HISTORY: "/match-history",
   DESIGN_SYSTEM: "/design-system",
 } as const;
 
@@ -42,6 +43,7 @@ export const STORAGE_KEYS = {
   DECK_CHECKPOINTS: "manabrew-deck-checkpoints",
   DECK_EDITOR_PRESENTATION: "manabrew-deck-editor-presentation",
   FORGE_WASM_VALIDATION: "manabrew-forge-wasm-validation",
+  MATCH_HISTORY: "manabrew-match-history",
 } as const;
 
 export { DEFAULT_DECK_NAME, DEFAULT_IMPORT_NAME } from "./deckNames.constants";

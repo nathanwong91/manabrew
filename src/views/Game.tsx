@@ -70,6 +70,7 @@ import { buildCombatRows } from "@/components/game/combatRows";
 import { readableTextColor, withAlpha } from "@/themes/gameTheme";
 import { useTheme } from "@/hooks/useTheme";
 import { boardBackgroundDarken, boardBackgroundUrl } from "@/pixi/board/boardBackgrounds";
+import { ROUTES } from "@/lib/constants";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useLimitedStore } from "@/stores/useLimitedStore";
 import { peek as peekGauntletMatch, tryConsumeGauntletMatch } from "@/lib/gauntletReturn";
@@ -2360,6 +2361,7 @@ export default function Game({ exitTo }: GameProps = {}) {
             turn: gameView.turn,
             engineCrash,
             onEndGame: () => void endGame(),
+            onViewHistory: () => void endGame().then(() => navigate(ROUTES.MATCH_HISTORY)),
           }
         : null,
     modalHidden: promptModalHidden,

@@ -21,6 +21,7 @@ import Winston from "@/views/Winston";
 import Gauntlet from "@/views/Gauntlet";
 import Settings from "@/views/Settings";
 import About from "@/views/About";
+import MatchHistory from "@/views/MatchHistory";
 import Search from "@/views/Search";
 import DeckHub from "@/views/DeckHub";
 import AuthCallback from "@/views/AuthCallback";
@@ -187,6 +188,14 @@ export const router = createBrowserRouter([
         element: (
           <ErrorBoundary context="Settings">
             <Settings />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "match-history",
+        element: (
+          <ErrorBoundary context="Match History">
+            <MatchHistory />
           </ErrorBoundary>
         ),
       },

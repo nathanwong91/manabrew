@@ -3744,14 +3744,23 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       playerY += 36;
     }
 
+    const gap = 12;
+    const buttonWidth = Math.min(170, (panelWidth - 40 - gap) / 2);
+    const history = this.makeButton("MATCH HISTORY", gameOver.onViewHistory, {
+      color,
+      width: buttonWidth,
+      height: 44,
+    });
     const button = this.makeButton("RETURN TO MENU", gameOver.onEndGame, {
       color,
-      width: 170,
+      width: buttonWidth,
       height: 44,
       icon: "lucide-log-out",
     });
-    button.position.set((panelWidth - button.buttonWidth) / 2, panelHeight - 56);
-    group.addChild(button);
+    const left = (panelWidth - history.buttonWidth - button.buttonWidth - gap) / 2;
+    history.position.set(left, panelHeight - 56);
+    button.position.set(left + history.buttonWidth + gap, panelHeight - 56);
+    group.addChild(history, button);
     group.position.set(
       (this.layoutWidth - panelWidth) / 2,
       (this.viewportHeight - panelHeight) / 2,

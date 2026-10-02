@@ -156,6 +156,7 @@ export function PromptModalPreview({ preview, fixtures, onClose }: PromptModalPr
               turn: fixtures.gameView.turn,
               engineCrash: null,
               onEndGame: onClose,
+              onViewHistory: onClose,
             }
           : null,
       modalHidden: false,

@@ -23,6 +23,7 @@ export interface GameOverPromptSpec {
   turn: number;
   engineCrash: string | null;
   onEndGame: () => void;
+  onViewHistory: () => void;
 }
 
 export interface PromptLayerCallbacks {

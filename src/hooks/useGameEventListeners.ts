@@ -10,6 +10,8 @@ import { teardownForgeAiSession } from "@/game/hostedAiPlay";
 import { engineReportGameId, reportEngineStats } from "@/lib/engineStatsReport";
 import { currentOfflineGameId, reportOfflineGame } from "@/lib/offlinePlayRecord";
 import { offlineSeats } from "@/lib/offlineSeats";
+import { buildMatchEntry } from "@/lib/matchHistory";
+import { useMatchHistoryStore } from "@/stores/useMatchHistoryStore";
 import { clearLocalGame } from "@/lib/localGamePresence";
 import { useGameStore } from "@/stores/useGameStore";
 import type { GameState } from "@/stores/useGameStore";
@@ -160,12 +162,35 @@ function reportHostOutcome(state: GameState): void {
     })
     .catch(() => undefined);
 }
+function recordMatchHistory(state: GameState, gameId: string | null): void {
+  if (!gameId) return;
+  try {
+    const entry = buildMatchEntry({
+      id: gameId,
+      endedAt: new Date().toISOString(),
+      format: state.gameConfig?.formatId ?? null,
+      gameView: state.gameView,
+      myPlayerSlot: state.myPlayerSlot,
+      decks: state.gameDecks,
+      over: isOver(state),
+      engineCrash: state.engineCrash,
+    });
+    if (!entry) return;
+    const { entries, add } = useMatchHistoryStore.getState();
+    const prior = entries.find((e) => e.id === gameId);
+    if (prior && prior.result !== "abandoned" && entry.result === "abandoned") return;
+    add(entry);
+  } catch {
+    return;
+  }
+}
 /** Close the book on the current game. Safe to call more than once. */
 function reportEngineGame(): void {
   const state = useGameStore.getState();
   // Read before the offline record is closed: reporting the game clears it, and
   // the engine report below needs the same id to file itself against.
   const offlineGameId = currentOfflineGameId();
+  recordMatchHistory(state, state.isMultiplayer ? useServerStore.getState().gameId : offlineGameId);
   if (state.isMultiplayer) reportHostOutcome(state);
   if (!state.isMultiplayer) {
     clearLocalGame();

@@ -1,3 +1,4 @@
+import { stripUsernameTag } from "@/lib/username";
 import {
   Bounds,
   ColorMatrixFilter,
@@ -135,6 +136,7 @@ export class PlayerHudCapsule {
   private avatarHit = new Graphics();
   private heart: Text;
   private life: Text;
+  private nameLabel: Text;
   private lifeFloat: Text;
   private handCount: Text;
   private handFan = new Container();
@@ -247,6 +249,8 @@ export class PlayerHudCapsule {
     this.heart.anchor.set(0, 0.5);
     this.life = new Text({ text: String(spec.life), style: this.textStyle(15) });
     this.life.anchor.set(0, 0.5);
+    this.nameLabel = new Text({ text: "", style: this.textStyle(12) });
+    this.nameLabel.eventMode = "none";
     this.lifeFloat = new Text({ text: "", style: this.textStyle(16) });
     this.lifeFloat.anchor.set(0.5);
     this.lifeFloat.visible = false;
@@ -299,6 +303,7 @@ export class PlayerHudCapsule {
       this.avatarHit,
       this.heart,
       this.life,
+      this.nameLabel,
       this.handFan,
       this.handCount,
       this.emptyStateText,
@@ -620,6 +625,7 @@ export class PlayerHudCapsule {
     if (w <= 0 || h <= 0) return;
     this.contentBounds.clear();
     this.life.text = String(this.spec.life);
+    this.nameLabel.visible = false;
     this.updateFilters();
     this.applyOffline();
 
@@ -765,6 +771,7 @@ export class PlayerHudCapsule {
     this.avatarDia = AVATAR_DIAMETER;
     this.drawAvatar(this.avatarCx, this.avatarCy, this.avatarDia, !short);
     this.layoutLife(short ? w / 2 - 4 : w / 2, short ? 32 : 98, !short);
+    if (!short) this.placeName(w / 2, 66, 0.5, w - pad * 2);
     this.heart.visible = false;
     const hand = this.makeHandItem(short ? 26 : 32);
     hand.place(short ? w / 2 + 4 : (w - hand.w) / 2, short ? 32 : 146);
@@ -802,7 +809,9 @@ export class PlayerHudCapsule {
     const handX = lifeX + 14;
     const hand = this.makeHandItem(30);
     hand.place(handX, 34);
-    const dividerX = handX + hand.w + 8;
+    const nameX = handX + hand.w + 12;
+    const nameWidth = this.placeName(nameX, 34, 0, Math.min(140, w - nameX - 60));
+    const dividerX = nameWidth > 0 ? nameX + nameWidth + 10 : handX + hand.w + 8;
     const stateLeft = dividerX + 10;
     const badgeRight = Math.max(stateLeft, w - (this.spec.isSelf ? 44 : PANEL_PADDING));
     const visibleStates = this.layoutCompactStateIcons(stateLeft, 34, badgeRight - stateLeft);
@@ -840,6 +849,8 @@ export class PlayerHudCapsule {
         const contentX = pad + AVATAR_DIAMETER + 12;
         this.layoutLife(contentX, this.avatarCy, false);
         this.life.anchor.set(0, 0.5);
+        const nameX = contentX + this.life.width + 10;
+        this.placeName(nameX, this.avatarCy, 0, this.identityWidth - nameX - 4);
         this.makeHandItem(30).place(contentX, h - 32);
       } else {
         const lifeX = this.identityWidth - 4;
@@ -879,6 +890,7 @@ export class PlayerHudCapsule {
     }
     const lifeX = pad + AVATAR_DIAMETER + 54;
     this.layoutLife(lifeX, 29, false);
+    this.placeName(lifeX + 12, 29, 0, w - lifeX - 12 - pad);
     this.heart.visible = true;
     this.heart.text = "LIFE";
     this.heart.style = this.styled(8, "600", this.theme.gameTheme.textMuted);
@@ -912,6 +924,19 @@ export class PlayerHudCapsule {
         alpha: 0.9,
         width: 1,
       });
+  }
+
+  private placeName(x: number, y: number, anchorX: number, maxWidth: number): number {
+    const full = stripUsernameTag(this.spec.name);
+    this.nameLabel.style = this.textStyle(12);
+    this.nameLabel.text = full;
+    for (let length = full.length - 1; this.nameLabel.width > maxWidth && length > 1; length--) {
+      this.nameLabel.text = `${full.slice(0, length)}\u2026`;
+    }
+    this.nameLabel.anchor.set(anchorX, 0.5);
+    this.nameLabel.position.set(x, y);
+    this.nameLabel.visible = maxWidth > 24;
+    return this.nameLabel.visible ? this.nameLabel.width : 0;
   }
 
   private layoutLife(x: number, y: number, centered: boolean): void {

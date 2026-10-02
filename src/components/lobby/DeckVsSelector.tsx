@@ -14,6 +14,7 @@ import { ROUTES } from "@/lib/constants";
 import {
   fillRandomOpponents,
   hasCards,
+  type AiOpponentRef,
   resolveAiOpponent,
   withinStrength,
   type OpponentStrength,
@@ -101,6 +102,7 @@ export function DeckVsSelector({
       : null;
   const lastOfflineFormatId = usePreferencesStore((state) => state.lastOfflineFormatId);
   const lastAiOpponent = usePreferencesStore((state) => state.lastAiOpponent);
+  const lastAiTable = usePreferencesStore((state) => state.lastAiTable);
   const opponentStrength = usePreferencesStore((state) => state.opponentStrength);
   const setOpponentStrength = usePreferencesStore((state) => state.setOpponentStrength);
   const boardBackground = usePreferencesStore((state) => state.boardBackgroundId);
@@ -123,6 +125,7 @@ export function DeckVsSelector({
   const selectedFormatRef = useRef(selectedFormat);
   selectedFormatRef.current = selectedFormat;
   const opponentTouchedRef = useRef(false);
+  const [restoredFormat, setRestoredFormat] = useState<string | null>(null);
   const [brackets, setBrackets] = useState<Record<string, Bracket>>({});
   const bracketsRef = useRef(brackets);
   const offlineEngine = resolveOfflineEngine();
@@ -288,17 +291,25 @@ export function DeckVsSelector({
     if (decks.length > 0) void bracketsFor(decks).catch(() => undefined);
   }, [bracketsFor, isCommanderFormat, opponentDecks]);
   useEffect(() => {
-    if (!selectedFormat || opponentDecks[0] || opponentTouchedRef.current) return;
+    if (
+      !selectedFormat ||
+      restoredFormat !== selectedFormat ||
+      opponentDecks[0] ||
+      opponentTouchedRef.current
+    )
+      return;
     let cancelled = false;
     void (async () => {
       const withinStrengthPresets = await withinOpponentStrength(presetDecks);
       if (cancelled) return;
-      const resolved = resolveAiOpponent({
-        presets: withinStrengthPresets.length > 0 ? withinStrengthPresets : presetDecks,
-        savedDecks,
-        formatId: selectedFormat,
-        last: lastAiOpponent,
-      });
+      const resolveWith = (presets: Deck[]) =>
+        resolveAiOpponent({ presets, savedDecks, formatId: selectedFormat, last: lastAiOpponent });
+      const lastId = lastAiOpponent && "id" in lastAiOpponent ? lastAiOpponent.id : null;
+      const remembered = lastId ? resolveWith(presetDecks) : null;
+      const resolved =
+        remembered && remembered.id === lastId
+          ? remembered
+          : resolveWith(withinStrengthPresets.length > 0 ? withinStrengthPresets : presetDecks);
       if (!resolved) return;
       const source = resolved.source === "preset" ? "preset" : "local";
       setOpponentDecks((prev) => [
@@ -322,12 +333,88 @@ export function DeckVsSelector({
     };
   }, [
     selectedFormat,
+    restoredFormat,
     opponentDecks,
     presetDecks,
     savedDecks,
     lastAiOpponent,
     withinOpponentStrength,
   ]);
+  const restoreCtxRef = useRef({ presetDecks, savedDecks, loadHubDeck });
+  restoreCtxRef.current = { presetDecks, savedDecks, loadHubDeck };
+  const presetsReady = presetDecks.length > 0;
+  useEffect(() => {
+    if (!selectedFormat || restoredFormat === selectedFormat) return;
+    const table = lastAiTable?.formatId === selectedFormat ? lastAiTable : null;
+    if (!table || opponentTouchedRef.current) {
+      setRestoredFormat(selectedFormat);
+      return;
+    }
+    if (!presetsReady && table.seats.some((ref) => ref?.kind === "preset")) return;
+    let cancelled = false;
+    const { presetDecks: presets, savedDecks: saved, loadHubDeck: loadHub } = restoreCtxRef.current;
+    const seatCount = getFormat(selectedFormat)?.deckRules.requiresCommander
+      ? Math.min(Math.max(table.seats.length, 1), MAX_OPPONENTS)
+      : 1;
+    const resolveSeat = async (ref: AiOpponentRef | null): Promise<SelectedDeck | null> => {
+      if (ref?.kind === "preset") {
+        const deck = presets.find(
+          (d) =>
+            (d.id ?? d.name) === ref.id &&
+            (d.format ?? "standard") === selectedFormat &&
+            hasCards(d),
+        );
+        return deck ? selectedFromPreset(deck, selectedFormat) : null;
+      }
+      if (ref?.kind === "saved") {
+        const entry = saved.find(
+          (s) =>
+            s.id === ref.id && (s.deck.format ?? "standard") === selectedFormat && hasCards(s.deck),
+        );
+        return entry
+          ? {
+              id: `local:${entry.id}`,
+              sourceId: entry.id,
+              name: entry.deck.name,
+              sourceDeck: entry.deck,
+              source: "local",
+              formatId: selectedFormat,
+              commanderName: entry.deck.commanders?.[0]?.identity.name,
+            }
+          : null;
+      }
+      if (ref?.kind === "hub") {
+        try {
+          const detail = await loadHub(ref.id);
+          if ((detail.deck.format ?? detail.format ?? "standard") !== selectedFormat) return null;
+          return {
+            id: `hub:${detail.id}`,
+            sourceId: detail.id,
+            name: detail.title,
+            sourceDeck: detail.deck,
+            source: "hub",
+            formatId: selectedFormat,
+            commanderName: detail.deck.commanders?.[0]?.identity.name,
+          };
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    };
+    void Promise.all(
+      Array.from({ length: seatCount }, (_, i) => resolveSeat(table.seats[i] ?? null)),
+    ).then((restored) => {
+      if (cancelled) return;
+      if (!opponentTouchedRef.current) {
+        setOpponentDecks((prev) => (prev.some((seat) => seat) ? prev : restored));
+      }
+      setRestoredFormat(selectedFormat);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFormat, restoredFormat, lastAiTable, presetsReady]);
   function setSeat(index: number, selected: SelectedDeck | null) {
     setOpponentDecks((prev) => prev.map((seat, i) => (i === index ? selected : seat)));
   }
@@ -343,6 +430,7 @@ export function DeckVsSelector({
     if (formatId === selectedFormat) return;
     invalidateHubSelection();
     opponentTouchedRef.current = false;
+    setRestoredFormat(null);
     setPlayerDeck(null);
     setOpponentDecks(
       Array.from(
@@ -561,6 +649,19 @@ export function DeckVsSelector({
     if (playerDeck.formatId) prefs.setLastOfflineFormatId(playerDeck.formatId);
     if (playerDeck.source === "local" && playerDeck.sourceId !== "current") {
       prefs.setLastPlayedDeckId(playerDeck.sourceId);
+    }
+    if (playerDeck.formatId) {
+      prefs.setLastAiTable({
+        formatId: playerDeck.formatId,
+        seats: seatDecks.map((seat) => {
+          if (seat?.source === "preset") return { kind: "preset", id: seat.sourceId };
+          if (seat?.source === "hub") return { kind: "hub", id: seat.sourceId };
+          if (seat?.source === "local" && seat.sourceId !== "current") {
+            return { kind: "saved", id: seat.sourceId };
+          }
+          return null;
+        }),
+      });
     }
     if (first.source === "preset") {
       prefs.setLastAiOpponent({ kind: "preset", id: first.sourceId });

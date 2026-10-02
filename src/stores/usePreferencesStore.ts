@@ -161,6 +161,8 @@ export interface PreferencesState {
 
   lastAiOpponent: AiOpponentRef | null;
   setLastAiOpponent: (opponent: AiOpponentRef) => void;
+  lastAiTable: { formatId: string; seats: (AiOpponentRef | null)[] } | null;
+  setLastAiTable: (table: { formatId: string; seats: (AiOpponentRef | null)[] }) => void;
 
   lastRoomSetup: LastRoomSetup | null;
   setLastRoomSetup: (setup: LastRoomSetup) => void;
@@ -228,6 +230,7 @@ const PERSISTED_PREFERENCE_KEYS = [
   "lastPlayedAtByDeck",
   "lastOfflineFormatId",
   "lastAiOpponent",
+  "lastAiTable",
   "lastRoomSetup",
   "tableBackground",
 ] as const satisfies readonly (keyof PreferencesState)[];
@@ -460,6 +463,8 @@ export const usePreferencesStore = create<PreferencesState>()(
 
           lastAiOpponent: null,
           setLastAiOpponent: (lastAiOpponent) => set({ lastAiOpponent }),
+          lastAiTable: null,
+          setLastAiTable: (lastAiTable) => set({ lastAiTable }),
 
           lastRoomSetup: null,
           setLastRoomSetup: (lastRoomSetup) => set({ lastRoomSetup }),

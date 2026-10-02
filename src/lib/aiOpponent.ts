@@ -4,7 +4,8 @@ import type { Bracket } from "@/lib/brackets";
 export type AiOpponentRef =
   | { kind: "random" }
   | { kind: "preset"; id: string }
-  | { kind: "saved"; id: string };
+  | { kind: "saved"; id: string }
+  | { kind: "hub"; id: string };
 
 export interface ResolvedAiOpponent {
   id: string;

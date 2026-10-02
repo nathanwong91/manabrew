@@ -629,13 +629,42 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     const compactSelection = this.layerPresentation.modalBodyFit === "scale";
     const visibleRowCount = Math.max(1, Math.min(visibleOptions.length, 7));
     const width = this.modalPromptWidth(CHOICE_MODAL_WIDTH);
+    const availableWidth = Math.round(width - PANEL_PADDING * 2);
+    const showWeights = options.some((option) => option.weight !== 1);
+    const selectionColumns = this.layerPresentation.selectionColumns(
+      visibleOptions.every(({ option }) => !option.canRepeat),
+    );
+    const selectionGap = selectionColumns > 1 ? 8 : 0;
+    const optionWidth = (availableWidth - selectionGap * (selectionColumns - 1)) / selectionColumns;
+    const optionRowHeight = this.layerPresentation.selectionRowHeight;
+    const optionRowGap = this.layerPresentation.selectionRowPitch - optionRowHeight;
+    const optionLabels = visibleOptions.map(({ option }) =>
+      promptRichText(
+        option.label,
+        compactSelection ? 16 : 13,
+        this.theme.appTheme.foreground,
+        optionWidth - 58 - (option.canRepeat ? 102 : 0),
+        { weight: "600" },
+      ),
+    );
+    const gridRowHeights: number[] = [];
+    optionLabels.forEach((label, position) => {
+      const gridRow = Math.floor(position / selectionColumns);
+      const needed = label.height + (showWeights ? 22 : 0) + 24;
+      gridRowHeights[gridRow] = Math.max(gridRowHeights[gridRow] ?? optionRowHeight, needed);
+    });
+    const gridRowTops = gridRowHeights.map((_, row) =>
+      gridRowHeights.slice(0, row).reduce((sum, h) => sum + h + optionRowGap, 0),
+    );
+    const listHeight = Math.max(
+      visibleRowCount * 66,
+      gridRowHeights.slice(0, 7).reduce((sum, h) => sum + h + optionRowGap, 0),
+    );
     const height = Math.min(
-      Math.max(260, 132 + visibleRowCount * 66 + (showFilter ? 48 : 0) + 52),
+      Math.max(260, 132 + listHeight + (showFilter ? 48 : 0) + 52),
       this.viewportHeight - 24,
     );
     const { panel, body, footer } = this.createModalShell(width, height, presentation, true, 60);
-    const availableWidth = Math.round(width - PANEL_PADDING * 2);
-    const showWeights = options.some((option) => option.weight !== 1);
     let y = 4;
 
     if (showFilter) {
@@ -670,13 +699,6 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       y += 66;
     }
 
-    const selectionColumns = this.layerPresentation.selectionColumns(
-      visibleOptions.every(({ option }) => !option.canRepeat),
-    );
-    const selectionGap = selectionColumns > 1 ? 8 : 0;
-    const optionWidth = (availableWidth - selectionGap * (selectionColumns - 1)) / selectionColumns;
-    const optionRowHeight = this.layerPresentation.selectionRowHeight;
-    const optionRowPitch = this.layerPresentation.selectionRowPitch;
     let optionPosition = 0;
     for (const { option, index } of visibleOptions) {
       const count = this.counts.get(index) ?? 0;
@@ -684,11 +706,11 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       const selected = count > 0;
       const canIncrement = currentTotal + option.weight <= maxTotal;
       const disabled = !selected && !canIncrement;
-      const rowHeight = optionRowHeight;
-      const row = new Container();
       const optionColumn = optionPosition % selectionColumns;
       const optionRow = Math.floor(optionPosition / selectionColumns);
-      row.position.set(optionColumn * (optionWidth + selectionGap), y + optionRow * optionRowPitch);
+      const rowHeight = gridRowHeights[optionRow]!;
+      const row = new Container();
+      row.position.set(optionColumn * (optionWidth + selectionGap), y + gridRowTops[optionRow]!);
       row.eventMode = disabled ? "none" : "static";
       row.cursor = disabled ? "default" : "pointer";
       row.hitArea = new Rectangle(0, 0, optionWidth, rowHeight);
@@ -746,18 +768,8 @@ export abstract class PromptModalLayer extends PromptLayerBase {
         row.addChild(check);
       }
 
-      const quantityWidth = option.canRepeat ? 102 : 0;
-      const label = promptRichText(
-        option.label,
-        compactSelection ? 16 : 13,
-        this.theme.appTheme.foreground,
-        optionWidth - 58 - quantityWidth,
-        { weight: "600", maxLines: compactSelection && !showWeights ? 2 : 1 },
-      );
-      label.position.set(
-        42,
-        showWeights ? 10 : compactSelection ? (rowHeight - label.height) / 2 : 19,
-      );
+      const label = optionLabels[optionPosition]!;
+      label.position.set(42, showWeights ? 10 : (rowHeight - label.height) / 2);
       row.addChild(label);
       if (showWeights) {
         const weight = promptText(
@@ -766,7 +778,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
           selected ? this.theme.gameTheme.cardSelection : this.theme.appTheme["muted-foreground"],
           { weight: "600" },
         );
-        weight.position.set(42, 32);
+        weight.position.set(42, label.y + label.height + 4);
         row.addChild(weight);
       }
 
@@ -789,6 +801,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
 
       if (option.canRepeat) {
         const controlX = optionWidth - 120;
+        const controlY = (rowHeight - 32) / 2;
         const minus = this.makeButton(
           "",
           () => {
@@ -806,16 +819,16 @@ export abstract class PromptModalLayer extends PromptLayerBase {
             height: 32,
           },
         );
-        minus.position.set(controlX, 12);
+        minus.position.set(controlX, controlY);
         minus.on("pointertap", (event) => event.stopPropagation());
         const countBackground = new Graphics()
-          .roundRect(controlX + 38, 12, 30, 32, 7)
+          .roundRect(controlX + 38, controlY, 30, 32, 7)
           .fill({ color: hexToNum(this.theme.appTheme.muted), alpha: 0.55 });
         const countText = promptText(String(count), 13, this.theme.appTheme.foreground, {
           weight: "700",
         });
         countText.anchor.set(0.5);
-        countText.position.set(controlX + 53, 28);
+        countText.position.set(controlX + 53, controlY + 16);
         const plus = this.makeButton("", increment, {
           title: `Add one ${option.label}`,
           icon: "lucide-plus",
@@ -825,7 +838,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
           width: 30,
           height: 32,
         });
-        plus.position.set(controlX + 76, 12);
+        plus.position.set(controlX + 76, controlY);
         plus.on("pointertap", (event) => event.stopPropagation());
         row.addChild(minus, countBackground, countText, plus);
       }
@@ -834,7 +847,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       body.addChild(row);
       optionPosition += 1;
     }
-    y += Math.ceil(optionPosition / selectionColumns) * optionRowPitch;
+    y += gridRowHeights.reduce((sum, h) => sum + h + optionRowGap, 0);
     if (compactSelection) {
       let touchId: number | null = null;
       let touchStartY = 0;

@@ -31,6 +31,7 @@ export interface PlayerHudFact {
 export interface PlayerHudSpec {
   playerId: string;
   name: string;
+  commander?: string;
   isSelf: boolean;
   life: number;
   color: string;

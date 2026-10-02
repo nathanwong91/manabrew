@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/stores/useGameStore";
 import type { FlashItem } from "@/components/game/game.types";
 import type { GameViewDto } from "@/protocol/game";
+import { usePreferencesStore } from "@/stores/usePreferencesStore";
+import { notePaceApplied, pendingPaceDelayMs } from "@/lib/opponentPace";
 
 export function useFlashQueue(flashDurationMs: number) {
   const deferredQueue = useGameStore((s) => s.deferredQueue);
@@ -9,6 +11,7 @@ export function useFlashQueue(flashDurationMs: number) {
   const flashQueueRef = useRef<FlashItem[]>([]);
   const isFlashingRef = useRef(false);
   const deferredStateRef = useRef<{ gameView: unknown; prompt: unknown } | null>(null);
+  const paceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   function applyDeferredState() {
     const deferred = deferredStateRef.current;
@@ -21,6 +24,7 @@ export function useFlashQueue(flashDurationMs: number) {
     const updates: Record<string, unknown> = {};
     if (gameView) {
       updates.gameView = gameView;
+      notePaceApplied();
       // Mirror route(): an eliminated seat has no pending prompt.
       const view = gameView as GameViewDto;
       const me = view.players?.find((p) => p.id === useGameStore.getState().myPlayerSlot);
@@ -41,6 +45,17 @@ export function useFlashQueue(flashDurationMs: number) {
     if (queue.length === 0) {
       isFlashingRef.current = false;
       useGameStore.setState({ isFlashing: false });
+      return;
+    }
+
+    const paceDelay = pendingPaceDelayMs(
+      queue[0]!,
+      useGameStore.getState().myPlayerSlot,
+      usePreferencesStore.getState().opponentPace,
+    );
+    if (paceDelay > 0) {
+      isFlashingRef.current = true;
+      paceTimerRef.current = setTimeout(startNextSnapshot, paceDelay);
       return;
     }
 
@@ -93,6 +108,7 @@ export function useFlashQueue(flashDurationMs: number) {
   // drainer.
   useEffect(() => {
     return () => {
+      clearTimeout(paceTimerRef.current);
       isFlashingRef.current = false;
       flashQueueRef.current = [];
       deferredStateRef.current = null;

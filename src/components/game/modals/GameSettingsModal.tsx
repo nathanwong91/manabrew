@@ -18,6 +18,7 @@ import {
 } from "@/components/game/cardPreviewStyles";
 import { usePromptPreferencesStore } from "@/stores/usePromptPreferencesStore";
 import { HAND_ORDER_OPTIONS } from "@/lib/handOrder";
+import { OPPONENT_PACE_OPTIONS } from "@/lib/opponentPace";
 import { TableSetupTableCard } from "@/components/lobby/TableSetupTableCard";
 import { useServerStore } from "@/stores/useServerStore";
 
@@ -145,6 +146,13 @@ export function GameSettingsModal({ onClose }: { onClose: () => void }) {
             options={ON_OFF}
             onChange={prefs.setChooseOrderOnMultipleTriggers}
             hint="When off, simultaneous triggers are ordered automatically."
+          />
+          <Choice
+            label="Opponent pace"
+            value={prefs.opponentPace}
+            options={OPPONENT_PACE_OPTIONS}
+            onChange={prefs.setOpponentPace}
+            hint="Slows how quickly other players' actions appear so you can follow them."
           />
           <Choice
             label="Touch feedback"

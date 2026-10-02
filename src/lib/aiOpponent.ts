@@ -1,4 +1,5 @@
 import type { Deck } from "@/protocol/deck";
+import type { Bracket } from "@/lib/brackets";
 
 export type AiOpponentRef =
   | { kind: "random" }
@@ -16,6 +17,14 @@ interface ResolveAiOpponentArgs {
   savedDecks: { id: string; deck: Deck }[];
   formatId: string;
   last: AiOpponentRef | null;
+}
+
+export type OpponentStrength = "casual" | "balanced" | "any";
+
+const MAX_BRACKET: Record<OpponentStrength, Bracket> = { casual: 2, balanced: 3, any: 5 };
+
+export function withinStrength(bracket: Bracket, strength: OpponentStrength): boolean {
+  return bracket <= MAX_BRACKET[strength];
 }
 
 interface FillRandomOpponentsArgs {

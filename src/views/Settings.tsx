@@ -823,6 +823,28 @@ export default function Settings() {
             </PreferenceCard>
 
             <PreferenceCard
+              title={`Opponent strength`}
+              description={`Limit random Commander opponent decks by estimated bracket. ManaBot is the easier pilot. Forge bot plays stronger.`}
+            >
+              <div className="flex flex-wrap gap-2">
+                {(["casual", "balanced", "any"] as const).map((strength) => (
+                  <Button
+                    key={strength}
+                    variant={prefs.opponentStrength === strength ? "selected" : "outline"}
+                    size="sm"
+                    onClick={() => prefs.setOpponentStrength(strength)}
+                  >
+                    {strength === "casual"
+                      ? `Casual`
+                      : strength === "balanced"
+                        ? `Balanced`
+                        : `Any`}
+                  </Button>
+                ))}
+              </div>
+            </PreferenceCard>
+
+            <PreferenceCard
               title={`Opponent layout`}
               description={`Focus on one opponent, or keep every opponent field equally visible.`}
             >

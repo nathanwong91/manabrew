@@ -4,7 +4,7 @@ import { getServerConnectionDefaults } from "@/config/webRuntimeConfig";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { DEFAULT_MUSIC_VOLUME, DEFAULT_SOUND_EFFECTS_VOLUME } from "@/lib/gameSounds";
 import { ensureUsernameTag, hasUsernameTag } from "@/lib/username";
-import type { AiOpponentRef } from "@/lib/aiOpponent";
+import type { AiOpponentRef, OpponentStrength } from "@/lib/aiOpponent";
 import type { KnownRelay } from "@/config/knownRelays";
 import type { PlaymatSettings } from "@/protocol/game";
 import type { AiController, GameFormat } from "@/types/server";
@@ -122,6 +122,8 @@ export interface PreferencesState {
 
   aiController: AiController;
   setAiController: (controller: AiController) => void;
+  opponentStrength: OpponentStrength;
+  setOpponentStrength: (strength: OpponentStrength) => void;
 
   hideAccountSaveNudge: boolean;
   setHideAccountSaveNudge: (value: boolean) => void;
@@ -211,6 +213,7 @@ const PERSISTED_PREFERENCE_KEYS = [
   "ironsmithRuntimeEnabled",
   "directTransport",
   "aiController",
+  "opponentStrength",
   "hideAccountSaveNudge",
   "cardPreviewMode",
   "cardHoverDelayMs",
@@ -371,6 +374,9 @@ export const usePreferencesStore = create<PreferencesState>()(
 
           aiController: "manabot",
           setAiController: (aiController) => set({ aiController }),
+
+          opponentStrength: "any",
+          setOpponentStrength: (opponentStrength) => set({ opponentStrength }),
 
           hideAccountSaveNudge: false,
           setHideAccountSaveNudge: (hideAccountSaveNudge) => set({ hideAccountSaveNudge }),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fillRandomOpponents } from "@/lib/aiOpponent";
+import { fillRandomOpponents, withinStrength } from "@/lib/aiOpponent";
 import type { Deck } from "@/protocol/deck";
 
 const deck = (name: string) => ({ name }) as Deck;
@@ -76,5 +76,22 @@ describe("fillRandomOpponents", () => {
       random: () => 0.99,
     });
     expect(names(filled)).toEqual(["e"]);
+  });
+});
+
+describe("withinStrength", () => {
+  it("allows brackets 2 and below for casual", () => {
+    expect(withinStrength(1, "casual")).toBe(true);
+    expect(withinStrength(2, "casual")).toBe(true);
+    expect(withinStrength(3, "casual")).toBe(false);
+  });
+
+  it("allows brackets 3 and below for balanced", () => {
+    expect(withinStrength(3, "balanced")).toBe(true);
+    expect(withinStrength(4, "balanced")).toBe(false);
+  });
+
+  it("allows everything for any", () => {
+    expect(withinStrength(5, "any")).toBe(true);
   });
 });

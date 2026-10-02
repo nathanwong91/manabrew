@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { usePresetDecks } from "@/stores/usePresetDecksStore";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,15 @@ import { useIsShortScreen, useIsTouch } from "@/hooks/useBreakpoints";
 import { cn, pickRandomDistinct } from "@/lib/utils";
 import { toast } from "sonner";
 import { ROUTES } from "@/lib/constants";
-import { fillRandomOpponents, hasCards, resolveAiOpponent } from "@/lib/aiOpponent";
+import {
+  fillRandomOpponents,
+  hasCards,
+  resolveAiOpponent,
+  withinStrength,
+  type OpponentStrength,
+} from "@/lib/aiOpponent";
+import { assessBracket, BRACKET_INFO, type Bracket } from "@/lib/brackets";
+import { fetchGameChangers } from "@/lib/gameChangers";
 import { getDeckFingerprint } from "@/lib/decks";
 import { reportPublishedDeckPlay } from "@/lib/deckPlayEvidence";
 import { GAME_FORMATS, getFormat, validateDeckSections } from "@/lib/formats";
@@ -53,6 +61,11 @@ interface DeckVsSelectorProps {
 }
 type PickingSide = "player" | number | null;
 const MAX_OPPONENTS = 3;
+const STRENGTH_LABELS: Record<OpponentStrength, string> = {
+  casual: `Casual`,
+  balanced: `Balanced`,
+  any: `Any`,
+};
 type PlayFormatId = string;
 export function DeckVsSelector({
   preSelectedDeckId,
@@ -88,6 +101,8 @@ export function DeckVsSelector({
       : null;
   const lastOfflineFormatId = usePreferencesStore((state) => state.lastOfflineFormatId);
   const lastAiOpponent = usePreferencesStore((state) => state.lastAiOpponent);
+  const opponentStrength = usePreferencesStore((state) => state.opponentStrength);
+  const setOpponentStrength = usePreferencesStore((state) => state.setOpponentStrength);
   const boardBackground = usePreferencesStore((state) => state.boardBackgroundId);
   const setBoardBackground = usePreferencesStore((state) => state.setBoardBackgroundId);
   const rememberedFormatId =
@@ -108,6 +123,8 @@ export function DeckVsSelector({
   const selectedFormatRef = useRef(selectedFormat);
   selectedFormatRef.current = selectedFormat;
   const opponentTouchedRef = useRef(false);
+  const [brackets, setBrackets] = useState<Record<string, Bracket>>({});
+  const bracketsRef = useRef(brackets);
   const offlineEngine = resolveOfflineEngine();
   const { details: accountDeckDetails } = useAccountDecks();
   const forkedPresetKeys = new Set(
@@ -239,32 +256,78 @@ export function DeckVsSelector({
   const filteredUserDecks = searchLower
     ? formatFilteredUserDecks.filter((deck) => deck.name.toLowerCase().includes(searchLower))
     : formatFilteredUserDecks;
+  const bracketsFor = useCallback(async (decks: Deck[]) => {
+    const missing = decks.filter((deck) => !(getDeckFingerprint(deck) in bracketsRef.current));
+    if (missing.length === 0) return bracketsRef.current;
+    const gameChangers = await fetchGameChangers();
+    const next = { ...bracketsRef.current };
+    for (const deck of missing) {
+      next[getDeckFingerprint(deck)] = assessBracket(deck, gameChangers, []).bracket;
+    }
+    bracketsRef.current = next;
+    setBrackets(next);
+    return next;
+  }, []);
+  const withinOpponentStrength = useCallback(
+    async (decks: Deck[]) => {
+      if (!isCommanderFormat || opponentStrength === "any") return decks;
+      try {
+        const known = await bracketsFor(decks);
+        return decks.filter((deck) =>
+          withinStrength(known[getDeckFingerprint(deck)]!, opponentStrength),
+        );
+      } catch {
+        return decks;
+      }
+    },
+    [bracketsFor, isCommanderFormat, opponentStrength],
+  );
+  useEffect(() => {
+    if (!isCommanderFormat) return;
+    const decks = opponentDecks.flatMap((seat) => (seat ? [seat.sourceDeck] : []));
+    if (decks.length > 0) void bracketsFor(decks).catch(() => undefined);
+  }, [bracketsFor, isCommanderFormat, opponentDecks]);
   useEffect(() => {
     if (!selectedFormat || opponentDecks[0] || opponentTouchedRef.current) return;
-    const resolved = resolveAiOpponent({
-      presets: presetDecks,
-      savedDecks,
-      formatId: selectedFormat,
-      last: lastAiOpponent,
-    });
-    if (!resolved) return;
-    const source = resolved.source === "preset" ? "preset" : "local";
-    setOpponentDecks((prev) => [
-      {
-        id: `${source}:${resolved.id}`,
-        sourceId: resolved.id,
-        name: resolved.deck.name,
-        desc: resolved.deck.description,
-        color: resolved.deck.color,
-        sourceDeck: resolved.deck,
-        source,
+    let cancelled = false;
+    void (async () => {
+      const withinStrengthPresets = await withinOpponentStrength(presetDecks);
+      if (cancelled) return;
+      const resolved = resolveAiOpponent({
+        presets: withinStrengthPresets.length > 0 ? withinStrengthPresets : presetDecks,
+        savedDecks,
         formatId: selectedFormat,
-        commanderName: resolved.deck.commanders?.[0]?.identity.name,
-        coverCardName: resolved.deck.coverCardName,
-      },
-      ...prev.slice(1),
-    ]);
-  }, [selectedFormat, opponentDecks, presetDecks, savedDecks, lastAiOpponent]);
+        last: lastAiOpponent,
+      });
+      if (!resolved) return;
+      const source = resolved.source === "preset" ? "preset" : "local";
+      setOpponentDecks((prev) => [
+        {
+          id: `${source}:${resolved.id}`,
+          sourceId: resolved.id,
+          name: resolved.deck.name,
+          desc: resolved.deck.description,
+          color: resolved.deck.color,
+          sourceDeck: resolved.deck,
+          source,
+          formatId: selectedFormat,
+          commanderName: resolved.deck.commanders?.[0]?.identity.name,
+          coverCardName: resolved.deck.coverCardName,
+        },
+        ...prev.slice(1),
+      ]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedFormat,
+    opponentDecks,
+    presetDecks,
+    savedDecks,
+    lastAiOpponent,
+    withinOpponentStrength,
+  ]);
   function setSeat(index: number, selected: SelectedDeck | null) {
     setOpponentDecks((prev) => prev.map((seat, i) => (i === index ? selected : seat)));
   }
@@ -368,15 +431,30 @@ export function DeckVsSelector({
       coverCardName: deck.coverCardName,
     };
   }
-  function handleRandomOpponent(index: number) {
-    if (!selectedFormat) return;
-    const table = [playerDeck, ...seatDecks].flatMap((seat) => (seat ? [seat.sourceDeck] : []));
-    const [random] = fillRandomOpponents({
-      slots: [null],
-      pool: formatFilteredPresets.filter(hasCards),
-      exclude: table,
+  async function fillOpponents(slots: (Deck | null)[], exclude: Deck[], candidates: Deck[]) {
+    const within = await withinOpponentStrength(candidates);
+    const filled = fillRandomOpponents({
+      slots,
+      pool: within,
+      exclude,
       fingerprint: getDeckFingerprint,
     });
+    if (!filled.includes(null) || within.length === candidates.length) return filled;
+    const relaxed = fillRandomOpponents({
+      slots: filled,
+      pool: candidates,
+      exclude,
+      fingerprint: getDeckFingerprint,
+    });
+    if (!relaxed.includes(null)) {
+      toast.warning(`Not enough ${STRENGTH_LABELS[opponentStrength]} decks, using any strength`);
+    }
+    return relaxed;
+  }
+  async function handleRandomOpponent(index: number) {
+    if (!selectedFormat) return;
+    const table = [playerDeck, ...seatDecks].flatMap((seat) => (seat ? [seat.sourceDeck] : []));
+    const [random] = await fillOpponents([null], table, formatFilteredPresets.filter(hasCards));
     if (!random) return;
     invalidateHubSelection();
     if (index === 0) opponentTouchedRef.current = true;
@@ -452,16 +530,11 @@ export function DeckVsSelector({
               ).legal),
         );
       const communityCandidates = await loadCommunityOpponents(missing, formatId);
-      opponents = fillRandomOpponents({
+      opponents = await fillOpponents(
         slots,
-        pool: [
-          ...formatFilteredPresets.filter(hasCards),
-          ...savedCandidates,
-          ...communityCandidates,
-        ],
-        exclude: [playerDeck.sourceDeck],
-        fingerprint: getDeckFingerprint,
-      });
+        [playerDeck.sourceDeck],
+        [...formatFilteredPresets.filter(hasCards), ...savedCandidates, ...communityCandidates],
+      );
     }
     if (opponents.some((deck) => deck === null)) {
       toast.error(`Not enough distinct decks for ${opponentCount} opponents`);
@@ -821,6 +894,22 @@ export function DeckVsSelector({
               </Button>
             ))}
           </div>
+          <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Strength
+          </span>
+          <div role="group" aria-label="Opponent deck strength" className="flex gap-1">
+            {(Object.keys(STRENGTH_LABELS) as OpponentStrength[]).map((strength) => (
+              <Button
+                key={strength}
+                variant={opponentStrength === strength ? "selected" : "outline"}
+                size="sm"
+                aria-pressed={opponentStrength === strength}
+                onClick={() => setOpponentStrength(strength)}
+              >
+                {STRENGTH_LABELS[strength]}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
       <div
@@ -862,6 +951,11 @@ export function DeckVsSelector({
               icon={<Bot className="h-3 w-3" />}
               deck={seat}
               emptyLabel={index === 0 ? `pick a deck` : `Random`}
+              detail={
+                seat && brackets[getDeckFingerprint(seat.sourceDeck)]
+                  ? BRACKET_INFO[brackets[getDeckFingerprint(seat.sourceDeck)]!].name
+                  : undefined
+              }
               sideColor="var(--player-colors-opponent1)"
               isActive={pickingSide === index}
               isConfirmed={!!seat && (index > 0 || opponentConfirmed) && pickingSide !== index}
@@ -885,7 +979,7 @@ export function DeckVsSelector({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleRandomOpponent(index);
+                      void handleRandomOpponent(index);
                     }}
                     className="inline-flex w-8 shrink-0 items-center justify-center gap-0.5 rounded-r-md text-[10px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground pointer-coarse:w-11"
                     title="Random AI deck"
@@ -942,6 +1036,7 @@ interface DeckSlotProps {
   deck: SelectedDeck | null;
   sideColor: string;
   emptyLabel?: string;
+  detail?: string;
   isActive: boolean;
   isConfirmed: boolean;
   onClick: () => void;
@@ -953,6 +1048,7 @@ function DeckSlot({
   icon,
   deck,
   emptyLabel = `pick a deck`,
+  detail,
   sideColor,
   isActive,
   isConfirmed,
@@ -993,6 +1089,11 @@ function DeckSlot({
         >
           {deck?.name ?? emptyLabel}
         </span>
+        {deck && detail && (
+          <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {detail}
+          </span>
+        )}
         {isActive ? (
           <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-primary">
             Selecting

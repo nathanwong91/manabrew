@@ -133,11 +133,11 @@ export function GameSettingsModal({ onClose }: { onClose: () => void }) {
             hint="Full control stops at every window. Autopass skips windows with only mana abilities after a short delay."
           />
           <Choice
-            label="Skip non-reactive instants"
+            label="Skip non-reactive instants and abilities"
             value={skipNonReactiveInstants}
             options={ON_OFF}
             onChange={setSkipNonReactiveInstants}
-            hint="On other players' turns, autopass ignores spells you would not cast then. Counters, removal, combat tricks, protection and flash creatures still stop."
+            hint="Outside your main phases, autopass skips spells and abilities unless something is on the stack, attackers or blockers are declared, or it is an opponent's end step. Then it still stops for counters, removal, combat tricks, protection and flash cards."
           />
           <Choice
             label="Choose simultaneous trigger order"

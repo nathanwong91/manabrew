@@ -17,7 +17,7 @@ import { gameIconTexture } from "@/pixi/gameIconCache";
 import { loadManaSymbolTexture } from "@/pixi/manaSymbolCache";
 import { PixiRichText } from "@/pixi/cardPreview/PixiRichText";
 import { deckCardToPreviewDto } from "@/lib/scryfall.utils";
-import { isReactiveCard } from "@/lib/reactiveCards";
+import { isReactiveCard, isReactiveText } from "@/lib/reactiveCards";
 import {
   CARD_H,
   CARD_HOVER_TRANSITION_SECONDS,
@@ -328,8 +328,31 @@ export function actionTitle(promptType: PromptOverlaySpec["action"]["promptType"
       return "Action Required";
   }
 }
+function isOwnMainPhase(spec: PromptOverlaySpec): boolean {
+  return (
+    spec.gameView.activePlayerId === spec.localPlayerId &&
+    (spec.gameView.step === "main1" || spec.gameView.step === "main2")
+  );
+}
+
+function isReactiveWindow(spec: PromptOverlaySpec): boolean {
+  const { stack, step, activePlayerId } = spec.gameView;
+  return (
+    stack.length > 0 ||
+    step === "combatDeclareAttackers" ||
+    step === "combatDeclareBlockers" ||
+    (step === "endOfTurn" && activePlayerId !== spec.localPlayerId)
+  );
+}
+
+function isPassableAbility(spec: PromptOverlaySpec, description: string): boolean {
+  if (isOwnMainPhase(spec)) return false;
+  return !isReactiveWindow(spec) || !isReactiveText(description);
+}
+
 function isPassableCast(spec: PromptOverlaySpec, cardId: string): boolean {
-  if (spec.gameView.activePlayerId === spec.localPlayerId) return false;
+  if (isOwnMainPhase(spec)) return false;
+  if (!isReactiveWindow(spec)) return true;
   const player = spec.gameView.players.find((p) => p.id === spec.localPlayerId);
   if (!player) return false;
   const card = [...player.hand, ...player.graveyard, ...player.exile, ...player.commandZone].find(
@@ -353,6 +376,9 @@ export function isAutopassWindow(spec: PromptOverlaySpec | null): boolean {
   return input.actions.every(
     (action) =>
       (action.type === "activateAbility" && action.isManaAbility) ||
+      (skipNonReactiveInstants &&
+        action.type === "activateAbility" &&
+        isPassableAbility(spec, action.description)) ||
       (skipNonReactiveInstants && action.type === "cast" && isPassableCast(spec, action.cardId)),
   );
 }

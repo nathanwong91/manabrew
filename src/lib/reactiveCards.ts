@@ -25,6 +25,10 @@ const REACTIVE_TEXT = new RegExp(
   "i",
 );
 
+export function isReactiveText(text: string): boolean {
+  return REACTIVE_TEXT.test(text);
+}
+
 const cache = new Map<string, boolean>();
 
 export function isReactiveCard(card: ReactiveCardFields): boolean {

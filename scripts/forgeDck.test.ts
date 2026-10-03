@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { parseDck, parseDckLine, parseDeckName, slugify } from "./forgeDck.mjs";
 
 describe("parseDckLine", () => {
-  it("reads name, set and collector number", () => {
+  it("reads name and set, ignoring the art index", () => {
     expect(parseDckLine("1 Sol Ring|C21|263")).toEqual({
       name: "Sol Ring",
       count: 1,
       set: "c21",
-      cardNumber: "263",
+      cardNumber: "",
     });
   });
 

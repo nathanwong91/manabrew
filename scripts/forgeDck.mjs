@@ -5,14 +5,14 @@ const NAME_TAIL = /^(.*?)\s*\[([A-Za-z0-9]+)]\s*\[(\d{4})]$/;
 export function parseDckLine(line) {
   const match = ENTRY.exec(line.trim());
   if (!match) return null;
-  const [rawName, set = "", number = ""] = match[2].split("|").map((part) => part.trim());
+  const [rawName, set = ""] = match[2].split("|").map((part) => part.trim());
   const name = rawName.replace(/\+$/, "").trim();
   if (!name) return null;
   return {
     name,
     count: Number(match[1]),
     set: set.toLowerCase(),
-    cardNumber: number.replace(/\*.*$/, ""),
+    cardNumber: "",
   };
 }
 

@@ -38,7 +38,7 @@ import {
 import { isHostedEngineAvailable } from "@/config/webRuntimeConfig";
 import {
   beginForgeWasmTrial,
-  hasForgeWasmVerdict,
+  forgeWasmNeedsValidation,
   isForgeWasmSupported,
   recordForgeWasmVerdict,
 } from "@/lib/forgeWasm";
@@ -278,7 +278,8 @@ async function initializeGame({
     startingLife,
     decks: gameDecks,
   });
-  const firstForgeStart = engine === "Forge" && platformType === "web" && !hasForgeWasmVerdict();
+  const firstForgeStart =
+    engine === "Forge" && platformType === "web" && forgeWasmNeedsValidation();
   if (firstForgeStart) beginForgeWasmTrial();
   try {
     const start = runtime.api.startGame({

@@ -4,7 +4,12 @@ import { useHubStore } from "@/stores/useHubStore";
 import { isFeatureEnabled } from "@/featureFlags";
 
 export function savePresetToAccountOnUse(presetKey: string | undefined) {
-  if (!isFeatureEnabled("accounts") || !presetKey || useAuthStore.getState().status !== "signedIn")
+  if (
+    !isFeatureEnabled("accounts") ||
+    !presetKey ||
+    presetKey.startsWith("precon_") ||
+    useAuthStore.getState().status !== "signedIn"
+  )
     return;
   const { capabilities, capabilitiesLoaded } = useHubStore.getState();
   if (capabilitiesLoaded && !capabilities?.accountDecks) return;

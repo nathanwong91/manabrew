@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { useMemo } from "react";
 import {
   expandPresetDeckDefinitions,
+  loadPreconDeckDefinitions,
   loadPresetDeckDefinitions,
   presetSupportsEngine,
   type PresetDeck,
@@ -11,14 +12,18 @@ import type { EngineKind } from "@/protocol";
 interface PresetDecksState {
   decks: PresetDeck[];
   resolved: boolean;
+  precons: PresetDeck[];
   prefetch: () => Promise<void>;
+  prefetchPrecons: () => Promise<void>;
 }
 
 let prefetchPromise: Promise<void> | null = null;
+let preconPromise: Promise<void> | null = null;
 
 export const usePresetDecksStore = create<PresetDecksState>((set) => ({
   decks: [],
   resolved: false,
+  precons: [],
   prefetch: () => {
     if (prefetchPromise) return prefetchPromise;
     prefetchPromise = (async () => {
@@ -34,6 +39,21 @@ export const usePresetDecksStore = create<PresetDecksState>((set) => ({
     })();
     return prefetchPromise;
   },
+  prefetchPrecons: () => {
+    if (preconPromise) return preconPromise;
+    preconPromise = (async () => {
+      try {
+        const definitions = await loadPreconDeckDefinitions();
+        set({ precons: expandPresetDeckDefinitions(definitions) });
+      } catch (err) {
+        preconPromise = null;
+        if (import.meta.env?.DEV) {
+          console.warn("[usePresetDecks] precon prefetch failed:", err);
+        }
+      }
+    })();
+    return preconPromise;
+  },
 }));
 
 export function usePresetDecks(engine?: EngineKind): PresetDeck[] {
@@ -44,6 +64,17 @@ export function usePresetDecks(engine?: EngineKind): PresetDeck[] {
   return useMemo(
     () => (engine ? decks.filter((deck) => presetSupportsEngine(deck, engine)) : decks),
     [decks, engine],
+  );
+}
+
+export function usePreconDecks(engine?: EngineKind): PresetDeck[] {
+  const precons = usePresetDecksStore((s) => s.precons);
+  if (!preconPromise) {
+    void usePresetDecksStore.getState().prefetchPrecons();
+  }
+  return useMemo(
+    () => (engine ? precons.filter((deck) => presetSupportsEngine(deck, engine)) : precons),
+    [precons, engine],
   );
 }
 

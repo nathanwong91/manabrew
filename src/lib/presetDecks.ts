@@ -36,7 +36,7 @@ export interface PresetDeckDefinition {
   desc: string;
   color: string;
   format?: DeckFormat | "historicBrawl";
-  commander?: string;
+  commander?: string | string[];
   coverCardName?: string;
   engines?: EngineKind[];
   cards: PresetDeckCardDefinition[];
@@ -91,9 +91,12 @@ export function expandPresetDeckDefinition(preset: PresetDeckDefinition): Preset
   let index = 0;
   const cards: DeckCard[] = [];
   const sideboard: DeckCard[] = [];
-  let commander: DeckCard | undefined;
+  const commanders: DeckCard[] = [];
 
-  const presetCommander = preset.commander ? frontFaceName(preset.commander) : undefined;
+  const commanderNames = (
+    Array.isArray(preset.commander) ? preset.commander : preset.commander ? [preset.commander] : []
+  ).map(frontFaceName);
+  const presetCommander = commanderNames[0];
   const appendCards = (
     entries: PresetDeckCardDefinition[],
     destination: DeckCard[],
@@ -126,8 +129,12 @@ export function expandPresetDeckDefinition(preset: PresetDeckDefinition): Preset
           allParts: entry.allParts,
         };
 
-        if (extractCommander && !commander && name === presetCommander) {
-          commander = card;
+        if (
+          extractCommander &&
+          commanderNames.includes(name) &&
+          !commanders.some((existing) => existing.identity.name === name)
+        ) {
+          commanders.push(card);
         } else {
           destination.push(card);
         }
@@ -138,8 +145,8 @@ export function expandPresetDeckDefinition(preset: PresetDeckDefinition): Preset
   appendCards(preset.sideboard ?? [], sideboard);
 
   // Commander goes in `commanders[]`, not the main 99 — strip it out of cards.
-  if (preset.commander && !commander) {
-    throw new Error(`Preset commander missing from cards: ${preset.commander}`);
+  if (commanders.length < commanderNames.length) {
+    throw new Error(`Preset commander missing from cards: ${commanderNames.join(", ")}`);
   }
 
   return {
@@ -153,11 +160,88 @@ export function expandPresetDeckDefinition(preset: PresetDeckDefinition): Preset
       : (presetCommander ?? choosePresetCoverCardName(preset.cards)),
     cards,
     sideboard,
-    commanders: commander ? [commander] : undefined,
+    commanders: commanders.length > 0 ? commanders : undefined,
     engines: preset.engines,
   };
 }
 
 export function expandPresetDeckDefinitions(presets: PresetDeckDefinition[]): PresetDeck[] {
   return presets.map(expandPresetDeckDefinition);
+}
+
+interface PreconBackFaceRecord {
+  name: string;
+  manaCost: string;
+  typeLine: string;
+  oracleText: string;
+  img?: string;
+}
+
+type PreconCardRecord = Omit<PresetDeckCardDefinition, "count" | "uris" | "backFace"> & {
+  img?: string;
+  backFace?: PreconBackFaceRecord;
+};
+
+type PreconDeckRecord = Omit<PresetDeckDefinition, "cards" | "sideboard"> & {
+  cards: Array<[number, number]>;
+};
+
+export interface PreconCatalog {
+  cards: PreconCardRecord[];
+  decks: PreconDeckRecord[];
+}
+
+const EMPTY_URIS: ScryfallImageUris = {
+  small: "",
+  normal: "",
+  large: "",
+  png: "",
+  art_crop: "",
+  border_crop: "",
+};
+
+export function preconImageUris(img: string | undefined, face = "front"): ScryfallImageUris {
+  if (!img) return EMPTY_URIS;
+  const [id, stamp] = img.split("?");
+  const url = (size: string, ext: string) =>
+    `https://cards.scryfall.io/${size}/${face}/${id[0]}/${id[1]}/${id}.${ext}${stamp ? `?${stamp}` : ""}`;
+  return {
+    small: url("small", "jpg"),
+    normal: url("normal", "jpg"),
+    large: url("large", "jpg"),
+    png: url("png", "png"),
+    art_crop: url("art_crop", "jpg"),
+    border_crop: url("border_crop", "jpg"),
+  };
+}
+
+export function preconToPresetDefinitions(catalog: PreconCatalog): PresetDeckDefinition[] {
+  return catalog.decks.map((deck) => ({
+    ...deck,
+    cards: deck.cards.map(([index, count]) => {
+      const { img, backFace, ...card } = catalog.cards[index];
+      return {
+        ...card,
+        count,
+        uris: preconImageUris(img),
+        backFace: backFace
+          ? {
+              name: backFace.name,
+              manaCost: backFace.manaCost,
+              typeLine: backFace.typeLine,
+              oracleText: backFace.oracleText,
+              uris: preconImageUris(backFace.img, "back"),
+            }
+          : undefined,
+      };
+    }),
+  }));
+}
+
+export async function loadPreconDeckDefinitions(
+  url = "/precon_decks/precons.json",
+): Promise<PresetDeckDefinition[]> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to fetch precon decks: ${response.status}`);
+  return preconToPresetDefinitions((await response.json()) as PreconCatalog);
 }

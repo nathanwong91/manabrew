@@ -12,7 +12,7 @@
 
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DECKS_DIR = path.join(__dirname, "..", "public/preset_decks");
@@ -102,7 +102,7 @@ function backFaceFromScryfall(sc) {
   };
 }
 
-function metadataFromScryfall(sc) {
+export function metadataFromScryfall(sc) {
   const front = frontFace(sc);
   const tl = front.type_line ?? sc.type_line ?? "";
   const { supertypes, types, subtypes } = parseTypeLine(tl);
@@ -126,7 +126,7 @@ function metadataFromScryfall(sc) {
   };
 }
 
-async function fetchBatch(identifiers) {
+export async function fetchBatch(identifiers) {
   const res = await fetch(`${SCRYFALL_API}/cards/collection`, {
     method: "POST",
     // Scryfall rejects the HTTP library's default User-Agent (400 generic_user_agent).
@@ -268,7 +268,9 @@ async function main() {
   console.log(`[enrich] enriched ${writtenCards} card entries across ${writtenFiles} files`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

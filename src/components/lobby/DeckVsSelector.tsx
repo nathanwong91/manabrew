@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { usePresetDecks } from "@/stores/usePresetDecksStore";
+import { usePreconDecks, usePresetDecks } from "@/stores/usePresetDecksStore";
 import { Button } from "@/components/ui/button";
 import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import { FormatBadge } from "@/components/game/FormatBadge";
@@ -135,7 +135,9 @@ export function DeckVsSelector({
       .map((detail) => detail.derivedFromPresetKey?.toLowerCase())
       .filter((key): key is string => key !== undefined),
   );
-  const presetDecks = usePresetDecks(offlineEngine).filter(
+  const basePresetDecks = usePresetDecks(offlineEngine);
+  const preconDecks = usePreconDecks(offlineEngine);
+  const presetDecks = [...basePresetDecks, ...preconDecks].filter(
     (preset) => !forkedPresetKeys.has((preset.id ?? "").toLowerCase()),
   );
   const hubDecks = useHubDeckSearch(

@@ -1,3 +1,4 @@
+import { logComms } from "@/lib/commsLog";
 import { getPlatform } from "@/platform";
 import type { ActiveGameSession } from "@/lib/activeGameSession";
 import { getHostedAiServerConnectionDefaults } from "@/config/webRuntimeConfig";
@@ -40,12 +41,15 @@ export async function startHostedAiGame(request: HostedAiGameRequest): Promise<H
     throw new Error("Hosted AI play requires a multiplayer server.");
   }
 
+  logComms("engine", "hosted-ai: connecting");
   await ensureServerConnection(getHostedAiServerConnectionDefaults(), true);
   const username = useServerStore.getState().username;
+  logComms("engine", `hosted-ai: connected as ${username ?? "(none)"}`);
   if (!username) throw new Error("Hosted AI play requires a server username.");
 
   const format = serverFormatFromId(request.formatId);
   const room = await findHostedRoom(format, 1 + request.opponentDecks.length);
+  logComms("engine", `hosted-ai: picked room ${room.room_id}`);
   return joinHostedRoomAndPlay(room.room_id, format, request, username);
 }
 
@@ -224,8 +228,15 @@ async function ensureServerConnection(
 
   const state = useServerStore.getState();
   if (state.connected && !reconnect) return;
-  if (state.currentRoom) await state.leaveRoom(true);
-  if (state.connected || state.connecting) await state.disconnect();
+  if (state.currentRoom) {
+    logComms("engine", "hosted-ai: leaving current room");
+    await state.leaveRoom(true);
+  }
+  if (state.connected || state.connecting) {
+    logComms("engine", "hosted-ai: disconnecting");
+    await state.disconnect();
+  }
+  logComms("engine", "hosted-ai: opening connection");
 
   const username = relayUsername() || serverDefaults.username || defaultHostedUsername();
   const auth = waitForEvent<{ success: boolean; error: string | null }>("server:auth_result");
@@ -235,7 +246,9 @@ async function ensureServerConnection(
     username,
     password: serverDefaults.password,
   });
+  logComms("engine", "hosted-ai: socket open, waiting for auth");
   const result = await auth;
+  logComms("engine", `hosted-ai: auth ${result.success ? "ok" : "failed"}`);
   if (!result.success) {
     throw new Error(result.error ?? "Server authentication failed.");
   }
@@ -268,8 +281,11 @@ async function fetchRooms(): Promise<RoomInfo[]> {
   const server = getPlatform().server;
   if (!server) return [];
   const listed = waitForEvent<RoomListPayload>("server:room_list");
+  logComms("engine", "hosted-ai: listing rooms");
   await server.listRooms();
-  return (await listed).rooms;
+  const rooms = (await listed).rooms;
+  logComms("engine", `hosted-ai: ${rooms.length} rooms listed`);
+  return rooms;
 }
 
 async function leaveCurrentRoomIfNeeded(targetRoomId?: string): Promise<void> {

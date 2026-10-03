@@ -1428,6 +1428,22 @@ export class PromptLayer extends PromptModalLayer {
     }
     buttons.push(
       this.makeActionButton(
+        "Always auto",
+        "lucide-zap",
+        () => {
+          usePromptPreferencesStore.getState().setAutoPayMana(true);
+          (info?.canConfirmFromPool ? action.onPayManaCost : action.onAutoManaCost)?.();
+        },
+        "secondary",
+        disabled,
+        minimal,
+        touch,
+        {
+          title:
+            "Pay automatically now and for every cost from now on (turn off in Board settings)",
+        },
+      ),
+      this.makeActionButton(
         "Cancel",
         "lucide-ban",
         action.onCancelManaCost,
